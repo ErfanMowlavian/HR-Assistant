@@ -1,0 +1,123 @@
+{
+  "job_title": "مهندس ارشد بک‌اند",
+  "job_text": "ما به دنبال یک مهندس ارشد بک‌اند هستیم که در طراحی و توسعهٔ سرویس‌های مقیاس‌پذیر با Python و FastAPI تجربه داشته باشد. آشنایی عمیق با PostgreSQL و Docker الزامی است. تسلط بر Kubernetes و Redis یک مزیت محسوب می‌شود. حداقل ۴ سال سابقهٔ مرتبط و مدرک کارشناسی لازم است.",
+  "requirements": {
+    "required_skills": ["Python", "FastAPI", "PostgreSQL", "Docker"],
+    "nice_to_have_skills": ["Kubernetes", "Redis"],
+    "min_years_experience": 4,
+    "education": "کارشناسی",
+    "seniority": "senior"
+  },
+  "resumes": [
+    {
+      "applicant_name": "سارا محمدی",
+      "relevance": 3,
+      "resume_text": "مهندس ارشد بک‌اند با ۶ سال تجربه. توسعهٔ سرویس‌ها با Python و FastAPI، طراحی پایگاه‌داده با PostgreSQL، استقرار با Docker و Kubernetes و کش با Redis. دکتری مهندسی کامپیوتر.",
+      "resume_fields": {
+        "skills": ["Python", "FastAPI", "PostgreSQL", "Docker", "Kubernetes", "Redis"],
+        "total_years_experience": 6.0,
+        "titles": ["مهندس ارشد بک‌اند"],
+        "education": "دکتری"
+      }
+    },
+    {
+      "applicant_name": "رضا کریمی",
+      "relevance": 3,
+      "resume_text": "توسعه‌دهندهٔ بک‌اند با ۵ سال سابقه. کار با Python، FastAPI، PostgreSQL و Docker در محیط تولید. تجربهٔ کار با Redis. کارشناسی ارشد نرم‌افزار.",
+      "resume_fields": {
+        "skills": ["Python", "FastAPI", "PostgreSQL", "Docker", "Redis"],
+        "total_years_experience": 5.0,
+        "titles": ["توسعه‌دهندهٔ بک‌اند"],
+        "education": "کارشناسی ارشد"
+      }
+    },
+    {
+      "applicant_name": "مریم حسینی",
+      "relevance": 2,
+      "resume_text": "برنامه‌نویس بک‌اند با ۴ سال تجربه در Python و FastAPI و طراحی پایگاه‌دادهٔ PostgreSQL. کارشناسی مهندسی کامپیوتر.",
+      "resume_fields": {
+        "skills": ["Python", "FastAPI", "PostgreSQL"],
+        "total_years_experience": 4.0,
+        "titles": ["برنامه‌نویس بک‌اند"],
+        "education": "کارشناسی"
+      }
+    },
+    {
+      "applicant_name": "علی رضایی",
+      "relevance": 2,
+      "resume_text": "توسعه‌دهنده با ۴ سال تجربه در Python و FastAPI. آشنا با کش Redis. کارشناسی فناوری اطلاعات.",
+      "resume_fields": {
+        "skills": ["Python", "FastAPI", "Redis"],
+        "total_years_experience": 4.0,
+        "titles": ["توسعه‌دهنده"],
+        "education": "کارشناسی"
+      }
+    },
+    {
+      "applicant_name": "نگار اکبری",
+      "relevance": 2,
+      "resume_text": "مهندس نرم‌افزار با ۵ سال تجربه. کار با Python و استقرار سرویس‌ها با Docker. کارشناسی نرم‌افزار.",
+      "resume_fields": {
+        "skills": ["Python", "Docker"],
+        "total_years_experience": 5.0,
+        "titles": ["مهندس نرم‌افزار"],
+        "education": "کارشناسی"
+      }
+    },
+    {
+      "applicant_name": "حسین قاسمی",
+      "relevance": 1,
+      "resume_text": "برنامه‌نویس جوان با ۲ سال تجربه در Python. در حال یادگیری توسعهٔ وب. کارشناسی کامپیوتر.",
+      "resume_fields": {
+        "skills": ["Python"],
+        "total_years_experience": 2.0,
+        "titles": ["برنامه‌نویس"],
+        "education": "کارشناسی"
+      }
+    },
+    {
+      "applicant_name": "فاطمه نوری",
+      "relevance": 1,
+      "resume_text": "کارشناس سیستم با ۳ سال تجربه. آشنایی با Docker و مدیریت سرور. دیپلم.",
+      "resume_fields": {
+        "skills": ["Docker"],
+        "total_years_experience": 3.0,
+        "titles": ["کارشناس سیستم"],
+        "education": "دیپلم"
+      }
+    },
+    {
+      "applicant_name": "امیر تهرانی",
+      "relevance": 1,
+      "resume_text": "توسعه‌دهندهٔ تازه‌کار با ۱ سال تجربه در Python و اسکریپت‌نویسی. کارشناسی ریاضی.",
+      "resume_fields": {
+        "skills": ["Python"],
+        "total_years_experience": 1.0,
+        "titles": ["توسعه‌دهندهٔ تازه‌کار"],
+        "education": "کارشناسی"
+      }
+    },
+    {
+      "applicant_name": "محمد زمانی",
+      "relevance": 0,
+      "resume_text": "طراح گرافیک با ۱ سال تجربه در Photoshop و Illustrator. بدون سابقهٔ برنامه‌نویسی. دیپلم هنر.",
+      "resume_fields": {
+        "skills": ["Photoshop", "Illustrator"],
+        "total_years_experience": 1.0,
+        "titles": ["طراح گرافیک"],
+        "education": "دیپلم"
+      }
+    },
+    {
+      "applicant_name": "زهرا صادقی",
+      "relevance": 0,
+      "resume_text": "کارشناس بازاریابی دیجیتال. تجربه در مدیریت کمپین و شبکه‌های اجتماعی. بدون مهارت فنی نرم‌افزاری. دیپلم.",
+      "resume_fields": {
+        "skills": ["بازاریابی", "شبکه‌های اجتماعی"],
+        "total_years_experience": 0.5,
+        "titles": ["کارشناس بازاریابی"],
+        "education": "دیپلم"
+      }
+    }
+  ]
+}

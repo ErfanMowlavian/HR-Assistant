@@ -28,3 +28,6 @@ addopts = "-q"
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["app*"]
+
+[tool.setuptools.package-data]
+"app.eval" = ["*.json"]  # ship the committed Gold Set with the package

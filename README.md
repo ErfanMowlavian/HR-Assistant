@@ -45,6 +45,14 @@ Implemented so far:
   string equality. **Default weights ship** (required-skill coverage weighted
   highest) and are passed into the scorer, so they can be overridden later.
 
+- **Issue #6 — gold set + evaluation harness.** The evidence-of-quality slice:
+  a committed Persian **Gold Set** (one JD + 10 human-labeled resumes, graded
+  0–3) and a harness that runs the **real ranking pipeline** over it and reports
+  **Precision@3** and **nDCG** — the project's answer to "how do you know it
+  works?". The same harness runs against the fake gateway (deterministic CI
+  baseline) or the real provider (headline number). See
+  [Evaluation](#evaluation-issue-6).
+
 Tests run entirely against the fake gateway — no real model call.
 
 ## Architecture
@@ -91,6 +99,35 @@ Configuration is read from `.env` (copy `.env.example`). The walking skeleton
 never calls a model, so no API key is required to run or test it; the LLM
 settings exist so the provider can be swapped later with no code change.
 
+## Evaluation (Issue #6)
+
+How we know the ranking works: the harness runs the real scoring pipeline over a
+committed Persian **Gold Set** (`backend/app/eval/gold_set.json` — one JD + 10
+human-labeled resumes graded 0–3) and reports **Precision@3** and **nDCG** of the
+system ranking against the human labels.
+
+```bash
+cd backend
+source .venv/bin/activate
+
+python -m app.eval          # fake gateway — deterministic, reproducible (CI)
+python -m app.eval --real   # real provider via .env — the headline number
+```
+
+Reproducible baseline against the **fake gateway** (the engineered Gold Set is
+ranked ideally by skill coverage, so this is a fixed CI number, asserted in
+`tests/test_eval_harness.py`):
+
+```
+Precision@3: 1.000
+nDCG:        1.000
+```
+
+The fake gateway judges skills by naive substring presence; the **headline
+number** comes from `--real`, where the model judges Persian/English skill
+variants semantically. The metric functions (`app/eval/metrics.py`) are pure and
+unit-tested independently.
+
 ## Frontend
 
 ```bash
@@ -126,6 +163,11 @@ backend/
       weights.py       ScoreWeights + shipped defaults
       scorer.py        score() — the pure deterministic scorer (Seam 2)
       service.py       per-skill judgments (LLM) → score → persist Evaluation
+    eval/
+      gold_set.json    committed Persian Gold Set (1 JD + 10 labeled resumes)
+      metrics.py       Precision@k / nDCG — pure functions
+      harness.py       run the pipeline over the Gold Set → metrics
+      __main__.py      `python -m app.eval [--real]`
     llm/
       gateway.py       LLMGateway abstract interface
       fake.py          FakeLLMGateway (tests / offline)
@@ -140,6 +182,8 @@ backend/
     test_submissions_api.py     submit → stored with fields, scoping, graceful
     test_scorer.py              Seam 2 — pure scorer: coverage, experience, weights
     test_ranking_api.py         submit → ranked best-first, breakdown, synonyms
+    test_eval_metrics.py        pure Precision@k / nDCG
+    test_eval_harness.py        Gold Set eval: reproducible P@3 / nDCG
 frontend/
   src/app/             RTL layout + nav (Vazirmatn); / HR dashboard, /apply applicant
   src/components/      Create-JD form, JD list, requirements editor, ranking panel, header, ui/
