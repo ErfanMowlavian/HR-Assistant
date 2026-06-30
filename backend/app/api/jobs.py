@@ -3,18 +3,18 @@ get one, and review/correct the extracted requirements."""
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, sessionmaker
 
-from app.db import get_db
+from app.api.submissions import rescore_job_in_background
+from app.db import get_db, get_sessionmaker
 from app.deps import get_gateway
 from app.extraction import extract_jd_requirements
 from app.llm.errors import GatewayError
 from app.llm.gateway import LLMGateway
 from app.models import JobDescription
 from app.schemas import JobDescriptionCreate, JobDescriptionRead, RequirementsUpdate
-from app.scoring import rescore_job
 
 router = APIRouter(prefix="/api/jobs", tags=["jobs"])
 
@@ -65,23 +65,27 @@ def get_job(job_id: int, db: Session = Depends(get_db)) -> JobDescription:
 def update_requirements(
     job_id: int,
     payload: RequirementsUpdate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     gateway: LLMGateway = Depends(get_gateway),
+    session_factory: sessionmaker = Depends(get_sessionmaker),
 ) -> JobDescription:
     """HR reviews and corrects the extracted requirements before they're used.
 
     The payload is validated against the JDRequirements schema, so a bad edit
     can't silently corrupt the ranking inputs. Correcting the requirements
     changes what every candidate is scored against, so each of the JD's
-    submissions is re-evaluated against the new requirements.
+    submissions is re-evaluated — but re-scoring N candidates means N×(skills)
+    model calls (tens of seconds), which would blow a reverse proxy's timeout.
+    So the save returns immediately with the candidates marked "processing" and
+    the re-score runs in the background (ADR-0013); the dashboard polls.
     """
     job = _get_or_404(db, job_id)
     job.requirements = payload.model_dump()
-    db.add(job)
-    db.flush()
-
-    rescore_job(db, job, gateway)
-
+    for submission in job.submissions:
+        submission.status = "processing"
     db.commit()
     db.refresh(job)
+
+    background_tasks.add_task(rescore_job_in_background, session_factory, gateway, job.id)
     return job

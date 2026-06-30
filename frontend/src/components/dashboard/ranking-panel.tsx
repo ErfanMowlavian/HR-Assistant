@@ -85,7 +85,12 @@ function CandidateRow({ candidate, rank }: { candidate: RankedCandidate; rank: n
           </span>
           <span className="font-medium">{candidate.applicant_name}</span>
         </div>
-        {ev ? (
+        {candidate.status === "processing" ? (
+          <Badge variant="secondary" className="gap-1.5">
+            <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
+            در حال محاسبه…
+          </Badge>
+        ) : ev ? (
           <span className="text-sm font-bold tabular-nums">{pct(ev.match_score)}</span>
         ) : (
           <Badge variant="secondary">ارزیابی‌نشده</Badge>
@@ -139,6 +144,22 @@ export function RankingPanel({ jobId }: { jobId: number }) {
     setOpen(next);
     if (next && candidates === null) void load();
   }
+
+  // Re-scoring (a fresh submission, edited requirements, or "rank now") runs in
+  // the background, so candidates come back "processing". Quietly re-poll until
+  // every row settles, then stop — no spinner toggling on the buttons.
+  React.useEffect(() => {
+    if (!open) return;
+    if (!candidates?.some((c) => c.status === "processing")) return;
+    const timer = setTimeout(async () => {
+      try {
+        setCandidates(await getRanking(jobId));
+      } catch {
+        /* transient; the next effect run retries */
+      }
+    }, 2500);
+    return () => clearTimeout(timer);
+  }, [open, candidates, jobId]);
 
   const busy = loading || ranking;
 

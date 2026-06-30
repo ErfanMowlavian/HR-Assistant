@@ -168,6 +168,8 @@ export interface Evaluation {
 export interface RankedCandidate {
   submission_id: number;
   applicant_name: string;
+  // "processing" while (re-)scoring runs in the background, then "done"/"failed".
+  status: SubmissionStatus;
   created_at: string;
   evaluation: Evaluation | null;
 }

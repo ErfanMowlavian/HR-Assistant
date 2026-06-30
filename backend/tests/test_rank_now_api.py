@@ -34,10 +34,13 @@ def test_rank_now_returns_candidates_best_match_first(client):
 
     res = client.post(f"/api/jobs/{job_id}/rank")
     assert res.status_code == 200
-    ranking = res.json()
 
+    # Re-scoring is async (ADR-0013): "rank now" returns immediately, then the
+    # background re-score (run synchronously by TestClient) settles the rows.
+    ranking = client.get(f"/api/jobs/{job_id}/ranking").json()
     names = [c["applicant_name"] for c in ranking]
     assert names == ["قوی", "ضعیف"]
+    assert all(c["status"] == "done" for c in ranking)
     assert all(c["evaluation"] is not None for c in ranking)
     assert ranking[0]["evaluation"]["match_score"] > ranking[1]["evaluation"]["match_score"]
 
@@ -59,7 +62,11 @@ def test_rank_now_recomputes_against_current_requirements(client):
             return SkillJudgment(skill=skill, verdict=SkillVerdict.YES)
 
     _use_gateway(client, _AllYes())
-    after = client.post(f"/api/jobs/{job_id}/rank").json()[0]["evaluation"]
+    resp = client.post(f"/api/jobs/{job_id}/rank")
+    assert resp.status_code == 200
+    # The background re-score (run synchronously by TestClient) recomputed every
+    # score against the new "all yes" judgments; read the settled ranking.
+    after = client.get(f"/api/jobs/{job_id}/ranking").json()[0]["evaluation"]
     assert after["match_score"] == 1.0
 
 

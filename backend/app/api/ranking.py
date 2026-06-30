@@ -12,16 +12,16 @@ the stored-data read path (Issue #7).
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, sessionmaker
 
-from app.db import get_db
+from app.api.submissions import rescore_job_in_background
+from app.db import get_db, get_sessionmaker
 from app.deps import get_gateway
 from app.llm.gateway import LLMGateway
 from app.models import JobDescription, Submission
 from app.schemas import EvaluationRead, RankedCandidate
-from app.scoring import rescore_job
 
 router = APIRouter(prefix="/api/jobs/{job_id}", tags=["ranking"])
 
@@ -44,6 +44,7 @@ def _ranked(db: Session, job_id: int) -> list[RankedCandidate]:
         RankedCandidate(
             submission_id=s.id,
             applicant_name=s.applicant_name,
+            status=s.status,
             created_at=s.created_at,
             evaluation=(
                 EvaluationRead.from_evaluation(s.evaluation) if s.evaluation else None
@@ -76,17 +77,24 @@ def get_ranking(job_id: int, db: Session = Depends(get_db)) -> list[RankedCandid
 @router.post("/rank", response_model=list[RankedCandidate])
 def rank_now(
     job_id: int,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     gateway: LLMGateway = Depends(get_gateway),
+    session_factory: sessionmaker = Depends(get_sessionmaker),
 ) -> list[RankedCandidate]:
     """Re-run the scoring pipeline live for every submission of a JD.
 
-    The dashboard normally renders stored Evaluations (computed on submit and
-    when requirements change). This action re-judges every skill through the
-    gateway and re-scores on demand — the live proof that the pipeline works.
-    A no-op per submission when the JD has no extracted requirements.
+    Re-judging every skill of every candidate is many model calls (tens of
+    seconds), which would exceed a reverse proxy's timeout. So this marks the
+    candidates "processing", kicks off the re-score in the background
+    (ADR-0013), and returns the current ranking immediately; the dashboard polls
+    until each row settles. A no-op per submission when the JD has no
+    requirements.
     """
     job = _job_or_404(db, job_id)
-    rescore_job(db, job, gateway)
+    for submission in job.submissions:
+        submission.status = "processing"
     db.commit()
+
+    background_tasks.add_task(rescore_job_in_background, session_factory, gateway, job.id)
     return _ranked(db, job_id)

@@ -121,6 +121,43 @@ def score_submission(
         db.close()
 
 
+def rescore_job_in_background(
+    session_factory: sessionmaker,
+    gateway: LLMGateway,
+    job_id: int,
+) -> None:
+    """Background worker: re-judge + re-score every submission of a JD against
+    its *current* requirements, flipping each to "done" ("failed" on error).
+
+    Unlike `score_submission` this does not re-extract — the resume text is
+    unchanged, only the requirements moved — so it just re-judges and re-scores
+    via the stored resume_fields. Used by the HR re-score actions (editing
+    requirements, "rank now") so they return instantly instead of holding the
+    request open across many model calls (the same proxy-timeout that made
+    submission synchronous-scoring fail — ADR-0013). Commits per submission so
+    the ranking fills in progressively, and each LLM call runs outside the write
+    lock (ADR-0012).
+    """
+    db = session_factory()
+    try:
+        job = db.get(JobDescription, job_id)
+        if job is None:  # deleted before the re-score ran
+            return
+        for submission in list(job.submissions):
+            try:
+                outcome = evaluate_submission(gateway, submission, job)
+                if outcome is not None:
+                    store_outcome(db, submission, outcome)
+                submission.status = "done"
+                db.commit()
+            except Exception:
+                db.rollback()
+                submission.status = "failed"
+                db.commit()
+    finally:
+        db.close()
+
+
 @router.post("", response_model=SubmissionRead, status_code=status.HTTP_201_CREATED)
 def create_submission(
     job_id: int,

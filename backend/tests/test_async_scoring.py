@@ -70,3 +70,48 @@ def test_unexpected_scoring_error_marks_failed(client, monkeypatch):
 def test_get_missing_submission_is_404(client):
     job_id = _make_job(client)
     assert client.get(f"/api/jobs/{job_id}/submissions/9999").status_code == 404
+
+
+def test_rank_now_marks_processing_then_settles(client):
+    # HR re-score actions are async too (ADR-0013): "rank now" returns the
+    # ranking immediately with rows still marked "processing", then the
+    # background re-score settles them to "done".
+    _use_gateway(client, FakeLLMGateway())
+    job_id = _make_job(client)
+    client.post(
+        f"/api/jobs/{job_id}/submissions",
+        json={"applicant_name": "قوی", "resume_text": "مسلط به Python و FastAPI."},
+    )
+
+    ranked = client.post(f"/api/jobs/{job_id}/rank").json()
+    # The response is built before the background task runs.
+    assert ranked[0]["status"] == "processing"
+
+    settled = client.get(f"/api/jobs/{job_id}/ranking").json()
+    assert settled[0]["status"] == "done"
+    assert settled[0]["evaluation"] is not None
+
+
+def test_editing_requirements_marks_processing_then_settles(client):
+    _use_gateway(client, FakeLLMGateway())
+    job_id = _make_job(client)
+    client.post(
+        f"/api/jobs/{job_id}/submissions",
+        json={"applicant_name": "نامزد", "resume_text": "مسلط به Go و Rust."},
+    )
+
+    updated = client.patch(
+        f"/api/jobs/{job_id}/requirements",
+        json={
+            "required_skills": ["Go", "Rust"],
+            "nice_to_have_skills": [],
+            "min_years_experience": 0,
+            "education": None,
+            "seniority": None,
+        },
+    )
+    assert updated.status_code == 200  # save returns instantly, no proxy timeout
+
+    settled = client.get(f"/api/jobs/{job_id}/ranking").json()[0]
+    assert settled["status"] == "done"
+    assert settled["evaluation"]["match_score"] == 1.0  # re-scored vs new reqs

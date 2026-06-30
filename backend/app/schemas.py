@@ -129,5 +129,9 @@ class RankedCandidate(BaseModel):
 
     submission_id: int
     applicant_name: str
+    # Background-scoring lifecycle: "processing" while (re-)scoring runs, then
+    # "done" / "failed". Lets the dashboard show a spinner and poll for the
+    # refreshed evaluation after HR edits requirements or clicks "rank now".
+    status: str = "done"
     created_at: datetime
     evaluation: EvaluationRead | None = None
