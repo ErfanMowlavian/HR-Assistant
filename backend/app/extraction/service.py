@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from app.extraction.normalize import normalize_digits
 from app.llm.gateway import LLMGateway
-from app.llm.types import JDRequirements
+from app.llm.types import JDRequirements, ResumeFields
 
 
 class ExtractionError(RuntimeError):
@@ -32,4 +32,21 @@ def extract_jd_requirements(gateway: LLMGateway, text: str) -> JDRequirements:
     except ExtractionError:
         raise
     except Exception as exc:  # provider error, validation failure, timeout…
+        raise ExtractionError(str(exc)) from exc
+
+
+def extract_resume_fields(gateway: LLMGateway, text: str) -> ResumeFields:
+    """Extract structured fields from a resume's Persian text.
+
+    Same normalize-then-extract-then-validate shape as JD extraction; the raw
+    resume text is stored separately so mixed Persian/English skill text is
+    preserved for per-skill judgment (#5).
+    """
+    normalized = normalize_digits(text)
+    try:
+        result = gateway.extract_resume(normalized)
+        return ResumeFields.model_validate(result.model_dump())
+    except ExtractionError:
+        raise
+    except Exception as exc:
         raise ExtractionError(str(exc)) from exc

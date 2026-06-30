@@ -34,9 +34,9 @@ export default function HomePage() {
   return (
     <main className="container max-w-3xl py-10">
       <header className="mb-8 space-y-1">
-        <h1 className="text-2xl font-bold">دستیار استخدام</h1>
+        <h1 className="text-2xl font-bold">داشبورد منابع انسانی</h1>
         <p className="text-muted-foreground">
-          داشبورد منابع انسانی — شرح شغل‌ها را بسازید و مدیریت کنید.
+          شرح شغل‌ها را بسازید و مدیریت کنید.
         </p>
       </header>
 

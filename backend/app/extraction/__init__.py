@@ -6,6 +6,6 @@ reuses the same `normalize_digits` + gateway pattern.
 """
 
 from app.extraction.normalize import normalize_digits
-from app.extraction.service import extract_jd_requirements
+from app.extraction.service import extract_jd_requirements, extract_resume_fields
 
-__all__ = ["normalize_digits", "extract_jd_requirements"]
+__all__ = ["normalize_digits", "extract_jd_requirements", "extract_resume_fields"]

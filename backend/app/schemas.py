@@ -6,7 +6,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field
 
-from app.llm.types import JDRequirements
+from app.llm.types import JDRequirements, ResumeFields
 
 
 class JobDescriptionCreate(BaseModel):
@@ -41,3 +41,28 @@ class JobDescriptionRead(BaseModel):
 # HR's review/correction of the extracted requirements is just a new
 # JDRequirements payload, validated by the same schema.
 RequirementsUpdate = JDRequirements
+
+
+class SubmissionCreate(BaseModel):
+    """Payload an applicant sends to apply to a JD."""
+
+    applicant_name: str = Field(min_length=1, max_length=255)
+    resume_text: str = Field(min_length=1, description="The full Persian resume text.")
+
+
+class SubmissionRead(BaseModel):
+    """A Submission as returned by the API."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    job_id: int
+    applicant_name: str
+    resume_text: str
+    resume_fields: ResumeFields | None = None
+    created_at: datetime
+
+    @computed_field
+    @property
+    def extraction_ok(self) -> bool:
+        return self.resume_fields is not None

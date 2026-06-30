@@ -22,6 +22,15 @@ Implemented so far:
   off-schema output, the JD is still saved with `requirements: null` and flagged
   so nothing is lost or silently corrupted.
 
+- **Issue #4 — applicant submission + resume extraction.** An applicant browses
+  open JDs, picks one, and pastes a resume (+ display name) to create a
+  Submission tied to that JD (`POST /api/jobs/{id}/submissions`). Resume fields
+  (skills, total years, titles, education) are extracted on submission, reusing
+  the same normalize→gateway→validate infra; the raw resume text is stored
+  verbatim so mixed Persian/English skill text is preserved for per-skill
+  judgment (#5). Failed extraction is graceful (fields null + flagged), same as
+  JD extraction.
+
 Tests run entirely against the fake gateway — no real model call.
 
 ## Architecture
@@ -87,13 +96,14 @@ backend/
     main.py            FastAPI app factory + CORS + lifespan (create tables)
     config.py          Settings from .env (DB + LLM provider)
     db.py              SQLite engine, session, get_db dependency
-    models.py          ORM: JobDescription
+    models.py          ORM: JobDescription, Submission
     schemas.py         Pydantic request/response
     deps.py            get_gateway() — the injectable LLM seam
     api/jobs.py        create (+extract) / list / get / PATCH requirements
+    api/submissions.py applicant submit (+extract) / list per JD
     extraction/
       normalize.py     Persian/Arabic digit → Latin folding
-      service.py       extract_jd_requirements() (normalize → gateway → validate)
+      service.py       extract_jd_requirements / extract_resume_fields
     llm/
       gateway.py       LLMGateway abstract interface
       fake.py          FakeLLMGateway (tests / offline)
@@ -105,8 +115,9 @@ backend/
     test_normalize.py           digit normalization (pure)
     test_extraction_service.py  normalize→extract→validate
     test_jd_extraction_api.py   extract on create, review/edit, graceful fail
+    test_submissions_api.py     submit → stored with fields, scoping, graceful
 frontend/
-  src/app/             RTL layout (Vazirmatn), HR dashboard page
-  src/components/      Create-JD form, JD list, requirements editor, ui/
+  src/app/             RTL layout + nav (Vazirmatn); / HR dashboard, /apply applicant
+  src/components/      Create-JD form, JD list, requirements editor, header, ui/
   src/lib/api.ts       Backend client
 ```

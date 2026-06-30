@@ -56,3 +56,32 @@ export async function updateRequirements(
   });
   return handle(res);
 }
+
+export interface ResumeFields {
+  skills: string[];
+  total_years_experience: number;
+  titles: string[];
+  education: string | null;
+}
+
+export interface Submission {
+  id: number;
+  job_id: number;
+  applicant_name: string;
+  resume_text: string;
+  resume_fields: ResumeFields | null;
+  created_at: string;
+  extraction_ok: boolean;
+}
+
+export async function createSubmission(
+  jobId: number,
+  payload: { applicant_name: string; resume_text: string }
+): Promise<Submission> {
+  const res = await fetch(`/api/jobs/${jobId}/submissions`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  return handle(res);
+}
