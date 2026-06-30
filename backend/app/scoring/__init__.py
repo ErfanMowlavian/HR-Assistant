@@ -8,7 +8,9 @@ from app.scoring.scorer import ComponentScore, ScoreResult, score
 from app.scoring.service import (
     EvaluationOutcome,
     evaluate,
+    evaluate_submission,
     rescore_job,
+    store_outcome,
     upsert_evaluation,
 )
 from app.scoring.weights import DEFAULT_WEIGHTS, ScoreWeights
@@ -19,6 +21,8 @@ __all__ = [
     "score",
     "EvaluationOutcome",
     "evaluate",
+    "evaluate_submission",
+    "store_outcome",
     "upsert_evaluation",
     "rescore_job",
     "DEFAULT_WEIGHTS",

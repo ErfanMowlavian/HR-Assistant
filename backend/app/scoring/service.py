@@ -59,6 +59,58 @@ def evaluate(
     return EvaluationOutcome(score=result, judgments=judgments)
 
 
+def evaluate_submission(
+    gateway: LLMGateway,
+    submission: Submission,
+    job: JobDescription,
+    *,
+    weights: ScoreWeights = DEFAULT_WEIGHTS,
+) -> EvaluationOutcome | None:
+    """The LLM half of scoring one Submission: judge + score, touching no DB.
+
+    Returns None when the JD has no extracted requirements yet — nothing to
+    score against. Pulling this out of `upsert_evaluation` lets the submission
+    hot path run the (slow) judging *before* opening a write transaction, so the
+    SQLite write lock is never held across network I/O.
+    """
+    if not job.requirements:
+        return None
+
+    requirements = JDRequirements.model_validate(job.requirements)
+    resume_fields = (
+        ResumeFields.model_validate(submission.resume_fields)
+        if submission.resume_fields
+        else None
+    )
+    return evaluate(
+        gateway,
+        requirements=requirements,
+        resume_fields=resume_fields,
+        resume_text=submission.resume_text,
+        weights=weights,
+    )
+
+
+def store_outcome(
+    db: Session,
+    submission: Submission,
+    outcome: EvaluationOutcome,
+    *,
+    weights: ScoreWeights = DEFAULT_WEIGHTS,
+) -> Evaluation:
+    """The DB half of scoring: persist a computed outcome as the one Evaluation
+    per Submission (re-running replaces it in place). Fast and I/O-free, so it
+    is safe to call inside a short write transaction."""
+    evaluation = submission.evaluation or Evaluation(submission_id=submission.id)
+    evaluation.match_score = outcome.score.match_score
+    evaluation.breakdown = outcome.score.model_dump()
+    evaluation.judgments = outcome.judgments
+    evaluation.weights = weights.model_dump()
+    evaluation.submission = submission
+    db.add(evaluation)
+    return evaluation
+
+
 def upsert_evaluation(
     db: Session,
     submission: Submission,
@@ -72,33 +124,16 @@ def upsert_evaluation(
     Returns None (and stores nothing) when the JD has no extracted requirements
     yet — there's nothing to score against, so the candidate simply shows as
     "not yet evaluated" until HR fills the requirements in.
+
+    Note: this judges (network I/O) *and* writes within the caller's
+    transaction. The submission hot path instead splits the two
+    (`evaluate_submission` then `store_outcome`) to keep the write lock short;
+    this combined form remains the convenient one for HR-side rescoring.
     """
-    if not job.requirements:
+    outcome = evaluate_submission(gateway, submission, job, weights=weights)
+    if outcome is None:
         return None
-
-    requirements = JDRequirements.model_validate(job.requirements)
-    resume_fields = (
-        ResumeFields.model_validate(submission.resume_fields)
-        if submission.resume_fields
-        else None
-    )
-
-    outcome = evaluate(
-        gateway,
-        requirements=requirements,
-        resume_fields=resume_fields,
-        resume_text=submission.resume_text,
-        weights=weights,
-    )
-
-    evaluation = submission.evaluation or Evaluation(submission_id=submission.id)
-    evaluation.match_score = outcome.score.match_score
-    evaluation.breakdown = outcome.score.model_dump()
-    evaluation.judgments = outcome.judgments
-    evaluation.weights = weights.model_dump()
-    evaluation.submission = submission
-    db.add(evaluation)
-    return evaluation
+    return store_outcome(db, submission, outcome, weights=weights)
 
 
 def rescore_job(

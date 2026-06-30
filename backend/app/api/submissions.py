@@ -14,7 +14,7 @@ from app.llm.errors import GatewayError
 from app.llm.gateway import LLMGateway
 from app.models import JobDescription, Submission
 from app.schemas import SubmissionCreate, SubmissionRead
-from app.scoring import upsert_evaluation
+from app.scoring import evaluate_submission, store_outcome
 
 router = APIRouter(prefix="/api/jobs/{job_id}/submissions", tags=["submissions"])
 
@@ -41,29 +41,39 @@ def _create_submission(
     resume_text: str,
 ) -> Submission:
     """Create + extract + score one Submission. Shared by paste and PDF upload,
-    so an uploaded resume travels the exact same path as a pasted one."""
+    so an uploaded resume travels the exact same path as a pasted one.
+
+    All LLM work (extraction + per-skill judging) happens *before* the write
+    transaction is opened. SQLite allows only one writer at a time, so holding
+    the write lock across these multi-second network calls would serialize
+    concurrent applicants into "database is locked" 500s. Computing first, then
+    writing in a quick burst, keeps the lock held for milliseconds.
+    """
     submission = Submission(
         job_id=job.id,
         applicant_name=applicant_name,
         resume_text=resume_text,
     )
 
-    # Extract structured fields on submission, reusing the extraction infra.
-    # As with JD extraction, a failed/unreachable model doesn't lose the
-    # resume: the Submission is persisted with resume_fields=null and flagged.
+    # Extract structured fields, reusing the extraction infra. As with JD
+    # extraction, a failed/unreachable model doesn't lose the resume: the
+    # Submission is persisted with resume_fields=null and flagged.
     try:
         fields = extract_resume_fields(gateway, resume_text)
         submission.resume_fields = fields.model_dump()
     except GatewayError:
         submission.resume_fields = None
 
+    # Score against the JD (story #11) so HR's ranked view is ready from stored
+    # results. The judging (LLM) runs here, outside any transaction; the no-op
+    # case (JD has no requirements yet) returns None.
+    outcome = evaluate_submission(gateway, submission, job)
+
+    # --- Short write transaction: no network I/O past this point. ---
     db.add(submission)
-    db.flush()  # assign submission.id before scoring
-
-    # Score the submission against its JD right away (story #11) so HR's ranked
-    # view is ready from stored results. No-op if the JD has no requirements yet.
-    upsert_evaluation(db, submission, job, gateway)
-
+    db.flush()  # assign submission.id for the Evaluation FK
+    if outcome is not None:
+        store_outcome(db, submission, outcome)
     db.commit()
     db.refresh(submission)
     return submission
