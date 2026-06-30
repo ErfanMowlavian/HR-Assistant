@@ -208,6 +208,7 @@ backend/
     api/submissions.py applicant submit (paste) / upload PDF / list per JD
     api/ranking.py     GET ranked candidates (stored, no model) / POST rank (live)
     api/gap.py         POST read-only applicant gap report (no persistence)
+    judging.py         judge_requirements — per-skill judging, graceful on errors
     gap.py             build_gap_report — JD skills a resume doesn't demonstrate
     seed.py            `python -m app.seed` — demo JD + resumes + stored Evaluations
     extraction/
@@ -245,6 +246,7 @@ backend/
     test_pdf_upload_api.py      upload: clean PDF → submission, garbled → paste nudge
     test_gap.py                 gap report builder: missing/partial, graceful (pure)
     test_gap_report_api.py      gap report read-only — never alters ranking
+    test_judging.py             per-skill judging: required/nice split, graceful
 frontend/
   src/app/             RTL layout + nav (Vazirmatn); / HR dashboard, /apply applicant
   src/components/      Create-JD form, JD list, requirements editor, ranking panel, header, ui/

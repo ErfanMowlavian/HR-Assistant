@@ -14,6 +14,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel
 
+from app.judging import judge_requirements
 from app.llm.gateway import LLMGateway
 from app.llm.types import JDRequirements, SkillVerdict
 
@@ -35,13 +36,6 @@ class GapReport(BaseModel):
     total_skills: int
 
 
-def _verdict(gateway: LLMGateway, skill: str, resume_text: str) -> SkillVerdict:
-    try:
-        return gateway.judge_skill(skill, resume_text).verdict
-    except Exception:  # unjudgeable (provider error): report as missing, never crash
-        return SkillVerdict.NO
-
-
 def build_gap_report(
     gateway: LLMGateway,
     requirements: JDRequirements,
@@ -49,25 +43,24 @@ def build_gap_report(
 ) -> GapReport:
     """Judge every JD skill against the resume and bucket the gaps. No I/O beyond
     the gateway; nothing is persisted."""
-    skills = [("required", s) for s in requirements.required_skills]
-    skills += [("nice", s) for s in requirements.nice_to_have_skills]
+    judged = judge_requirements(gateway, requirements, resume_text)
 
     missing: list[GapSkill] = []
     partial: list[GapSkill] = []
     demonstrated = 0
 
-    for kind, skill in skills:
-        verdict = _verdict(gateway, skill, resume_text)
-        if verdict is SkillVerdict.YES:
+    tagged = judged.tagged()
+    for kind, j in tagged:
+        if j.verdict is SkillVerdict.YES:
             demonstrated += 1
-        elif verdict is SkillVerdict.PARTIAL:
-            partial.append(GapSkill(skill=skill, verdict=verdict.value, kind=kind))
+        elif j.verdict is SkillVerdict.PARTIAL:
+            partial.append(GapSkill(skill=j.skill, verdict=j.verdict.value, kind=kind))
         else:
-            missing.append(GapSkill(skill=skill, verdict=verdict.value, kind=kind))
+            missing.append(GapSkill(skill=j.skill, verdict=j.verdict.value, kind=kind))
 
     return GapReport(
         missing=missing,
         partial=partial,
         demonstrated_count=demonstrated,
-        total_skills=len(skills),
+        total_skills=len(tagged),
     )

@@ -17,8 +17,9 @@ from dataclasses import dataclass
 
 from sqlalchemy.orm import Session
 
+from app.judging import judge_requirements
 from app.llm.gateway import LLMGateway
-from app.llm.types import JDRequirements, ResumeFields, SkillJudgment, SkillVerdict
+from app.llm.types import JDRequirements, ResumeFields
 from app.models import Evaluation, JobDescription, Submission
 from app.scoring.scorer import ScoreResult, score
 from app.scoring.weights import DEFAULT_WEIGHTS, ScoreWeights
@@ -32,13 +33,6 @@ class EvaluationOutcome:
     judgments: list[dict]  # {skill, verdict, reason, kind} — kind: required|nice
 
 
-def _judge(gateway: LLMGateway, skill: str, resume_text: str) -> SkillJudgment:
-    try:
-        return gateway.judge_skill(skill, resume_text)
-    except Exception as exc:  # provider error: treat as unmet, never crash
-        return SkillJudgment(skill=skill, verdict=SkillVerdict.NO, reason=str(exc))
-
-
 def evaluate(
     gateway: LLMGateway,
     *,
@@ -48,21 +42,19 @@ def evaluate(
     weights: ScoreWeights = DEFAULT_WEIGHTS,
 ) -> EvaluationOutcome:
     """Judge every JD skill against the resume, then score deterministically."""
-    required = [_judge(gateway, s, resume_text) for s in requirements.required_skills]
-    nice = [_judge(gateway, s, resume_text) for s in requirements.nice_to_have_skills]
+    judged = judge_requirements(gateway, requirements, resume_text)
 
     result = score(
         requirements=requirements,
-        required_judgments=required,
-        nice_judgments=nice,
+        required_judgments=judged.required,
+        nice_judgments=judged.nice,
         resume_fields=resume_fields or ResumeFields(),
         weights=weights,
     )
 
     judgments = [
         {"skill": j.skill, "verdict": j.verdict.value, "reason": j.reason, "kind": kind}
-        for kind, group in (("required", required), ("nice", nice))
-        for j in group
+        for kind, j in judged.tagged()
     ]
     return EvaluationOutcome(score=result, judgments=judgments)
 
