@@ -1,4 +1,7 @@
+"use client";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { RequirementsEditor } from "@/components/requirements-editor";
 import type { JobDescription } from "@/lib/api";
 
 function formatDate(iso: string): string {
@@ -12,7 +15,13 @@ function formatDate(iso: string): string {
   }
 }
 
-export function JobList({ jobs }: { jobs: JobDescription[] }) {
+export function JobList({
+  jobs,
+  onJobUpdated,
+}: {
+  jobs: JobDescription[];
+  onJobUpdated: (updated: JobDescription) => void;
+}) {
   if (jobs.length === 0) {
     return (
       <Card>
@@ -35,10 +44,11 @@ export function JobList({ jobs }: { jobs: JobDescription[] }) {
               </span>
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
             <p className="line-clamp-3 whitespace-pre-line text-sm text-muted-foreground">
               {job.text}
             </p>
+            <RequirementsEditor job={job} onUpdated={onJobUpdated} />
           </CardContent>
         </Card>
       ))}

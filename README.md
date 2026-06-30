@@ -6,12 +6,23 @@ and **deterministic math ranks** — explainable by design. See the PRD
 ([issue #1](https://github.com/ErfanMowlavian/HR-Assistant/issues/1)) and the
 ADRs/glossary/domain model under `docs/`.
 
-This repository currently implements **Issue #2 — the walking skeleton**: HR
-creates a Job Description (title + Persian text), it persists in SQLite, and it
-shows up in a Persian RTL dashboard. It stands up every layer the later slices
-build on: FastAPI + SQLite, the injectable LLM-gateway seam with a fake
-implementation, and the Next.js + shadcn/ui RTL shell with the Vazirmatn font.
-No real model is called in this slice.
+Implemented so far:
+
+- **Issue #2 — walking skeleton.** HR creates a Job Description (title + Persian
+  text), it persists in SQLite, and shows up in a Persian RTL dashboard. Stands
+  up every layer the later slices build on: FastAPI + SQLite, the injectable
+  LLM-gateway seam with a fake implementation, and the Next.js + shadcn/ui RTL
+  shell with the Vazirmatn font.
+- **Issue #3 — JD requirement extraction + review.** Creating a JD triggers
+  schema-constrained extraction of its structured requirements (required /
+  nice-to-have skills, minimum years, education, seniority) through the gateway;
+  Persian/Arabic digits are normalized before numeric reasoning. HR can review
+  and correct the extracted requirements (`PATCH /api/jobs/{id}/requirements`),
+  validated by the same Pydantic schema. If the model is unreachable or returns
+  off-schema output, the JD is still saved with `requirements: null` and flagged
+  so nothing is lost or silently corrupted.
+
+Tests run entirely against the fake gateway — no real model call.
 
 ## Architecture
 
@@ -79,17 +90,23 @@ backend/
     models.py          ORM: JobDescription
     schemas.py         Pydantic request/response
     deps.py            get_gateway() — the injectable LLM seam
-    api/jobs.py        POST/GET /api/jobs
+    api/jobs.py        create (+extract) / list / get / PATCH requirements
+    extraction/
+      normalize.py     Persian/Arabic digit → Latin folding
+      service.py       extract_jd_requirements() (normalize → gateway → validate)
     llm/
       gateway.py       LLMGateway abstract interface
       fake.py          FakeLLMGateway (tests / offline)
       litellm_gateway.py  LiteLLMGateway (production, lazy imports)
       types.py         JDRequirements, ResumeFields, SkillJudgment
   tests/
-    test_jobs_api.py   Seam 3 — create JD → appears in list
-    test_gateway.py    Seam 1 — gateway interface + fake
+    test_jobs_api.py            Seam 3 — create JD → appears in list
+    test_gateway.py             Seam 1 — gateway interface + fake
+    test_normalize.py           digit normalization (pure)
+    test_extraction_service.py  normalize→extract→validate
+    test_jd_extraction_api.py   extract on create, review/edit, graceful fail
 frontend/
   src/app/             RTL layout (Vazirmatn), HR dashboard page
-  src/components/      Create-JD form, JD list, shadcn/ui primitives
+  src/components/      Create-JD form, JD list, requirements editor, ui/
   src/lib/api.ts       Backend client
 ```

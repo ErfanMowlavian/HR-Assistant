@@ -8,7 +8,9 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from sqlalchemy import DateTime, Integer, String, Text
+from typing import Any
+
+from sqlalchemy import JSON, DateTime, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db import Base
@@ -29,3 +31,7 @@ class JobDescription(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow, nullable=False
     )
+
+    # Structured requirements extracted from `text` (LLM-extracted, then
+    # HR-reviewable). Null until extraction succeeds. Shape: JDRequirements.
+    requirements: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)

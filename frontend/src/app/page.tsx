@@ -27,6 +27,10 @@ export default function HomePage() {
     void refresh();
   }, [refresh]);
 
+  const handleJobUpdated = React.useCallback((updated: JobDescription) => {
+    setJobs((prev) => prev.map((j) => (j.id === updated.id ? updated : j)));
+  }, []);
+
   return (
     <main className="container max-w-3xl py-10">
       <header className="mb-8 space-y-1">
@@ -45,7 +49,7 @@ export default function HomePage() {
           {loading ? (
             <p className="text-sm text-muted-foreground">در حال بارگذاری…</p>
           ) : (
-            <JobList jobs={jobs} />
+            <JobList jobs={jobs} onJobUpdated={handleJobUpdated} />
           )}
         </section>
       </div>
