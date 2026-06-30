@@ -8,13 +8,27 @@ crash deeper in the stack.
 
 from __future__ import annotations
 
+from pydantic import ValidationError
+
 from app.extraction.normalize import normalize_digits
+from app.llm.errors import GatewayError, InvalidModelOutput, ProviderUnavailable
 from app.llm.gateway import LLMGateway
 from app.llm.types import JDRequirements, ResumeFields
 
 
-class ExtractionError(RuntimeError):
-    """Raised when extraction fails (provider error or invalid output)."""
+def _call(gateway_call, *, label: str):
+    """Run a gateway call, mapping its failure onto the seam's vocabulary.
+
+    A gateway adapter already raises a typed `GatewayError`, which we let
+    through. Anything else escaping the call is unclassified, so we treat it as
+    a transient `ProviderUnavailable` rather than guess it was bad output.
+    """
+    try:
+        return gateway_call()
+    except GatewayError:
+        raise
+    except Exception as exc:
+        raise ProviderUnavailable(f"{label}: {exc}") from exc
 
 
 def extract_jd_requirements(gateway: LLMGateway, text: str) -> JDRequirements:
@@ -24,15 +38,12 @@ def extract_jd_requirements(gateway: LLMGateway, text: str) -> JDRequirements:
     numeric fields (e.g. minimum years) are reasoned over correctly (ADR-0004).
     """
     normalized = normalize_digits(text)
+    result = _call(lambda: gateway.extract_jd(normalized), label="extract_jd")
+    # Re-validate at the boundary: off-schema output is invalid, not transient.
     try:
-        result = gateway.extract_jd(normalized)
-        # Re-validate at the boundary: even if a gateway hands back something
-        # off-schema, we raise ExtractionError instead of propagating raw.
         return JDRequirements.model_validate(result.model_dump())
-    except ExtractionError:
-        raise
-    except Exception as exc:  # provider error, validation failure, timeout…
-        raise ExtractionError(str(exc)) from exc
+    except ValidationError as exc:
+        raise InvalidModelOutput(str(exc)) from exc
 
 
 def extract_resume_fields(gateway: LLMGateway, text: str) -> ResumeFields:
@@ -43,10 +54,8 @@ def extract_resume_fields(gateway: LLMGateway, text: str) -> ResumeFields:
     preserved for per-skill judgment (#5).
     """
     normalized = normalize_digits(text)
+    result = _call(lambda: gateway.extract_resume(normalized), label="extract_resume")
     try:
-        result = gateway.extract_resume(normalized)
         return ResumeFields.model_validate(result.model_dump())
-    except ExtractionError:
-        raise
-    except Exception as exc:
-        raise ExtractionError(str(exc)) from exc
+    except ValidationError as exc:
+        raise InvalidModelOutput(str(exc)) from exc

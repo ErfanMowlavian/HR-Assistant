@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from app.db import get_db
 from app.deps import get_gateway
 from app.extraction import extract_jd_requirements
-from app.extraction.service import ExtractionError
+from app.llm.errors import GatewayError
 from app.llm.gateway import LLMGateway
 from app.models import JobDescription
 from app.schemas import JobDescriptionCreate, JobDescriptionRead, RequirementsUpdate
@@ -41,7 +41,7 @@ def create_job(
     try:
         requirements = extract_jd_requirements(gateway, payload.text)
         job.requirements = requirements.model_dump()
-    except ExtractionError:
+    except GatewayError:
         job.requirements = None
 
     db.add(job)

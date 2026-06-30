@@ -8,9 +8,30 @@ normalization land in slices #3–#5. The seam, however, is real today.
 
 from __future__ import annotations
 
+from pydantic import ValidationError
+
 from app.config import Settings, get_settings
+from app.llm.errors import GatewayError, InvalidModelOutput, ProviderUnavailable
 from app.llm.gateway import LLMGateway
 from app.llm.types import JDRequirements, ResumeFields, SkillJudgment
+
+# Exception class names that mean "the model responded, but off-schema" — the
+# matches Instructor raises when it can't coerce valid output after retries.
+# Matched by name so this module needn't import instructor (kept lazy).
+_INVALID_OUTPUT_EXC = {"ValidationError", "InstructorRetryException"}
+
+
+def _classify_gateway_error(exc: Exception) -> GatewayError:
+    """Map a raw provider/parse exception onto the gateway's failure vocabulary.
+
+    Off-schema output → InvalidModelOutput (retry won't help). Everything else —
+    transport, auth, timeout, rate limit, unknown — → ProviderUnavailable.
+    """
+    if isinstance(exc, GatewayError):
+        return exc
+    if isinstance(exc, ValidationError) or type(exc).__name__ in _INVALID_OUTPUT_EXC:
+        return InvalidModelOutput(str(exc))
+    return ProviderUnavailable(str(exc))
 
 
 class LiteLLMGateway(LLMGateway):
@@ -29,19 +50,22 @@ class LiteLLMGateway(LLMGateway):
     def _complete(self, response_model, system: str, user: str):
         s = self._settings
         client = self._instructor_client()
-        return client.chat.completions.create(
-            model=s.llm_model,
-            api_key=s.llm_api_key,
-            base_url=s.llm_base_url,
-            temperature=s.llm_temperature,
-            timeout=s.llm_timeout,
-            response_model=response_model,
-            max_retries=2,  # Instructor re-asks on schema-validation failure
-            messages=[
-                {"role": "system", "content": system},
-                {"role": "user", "content": user},
-            ],
-        )
+        try:
+            return client.chat.completions.create(
+                model=s.llm_model,
+                api_key=s.llm_api_key,
+                base_url=s.llm_base_url,
+                temperature=s.llm_temperature,
+                timeout=s.llm_timeout,
+                response_model=response_model,
+                max_retries=2,  # Instructor re-asks on schema-validation failure
+                messages=[
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": user},
+                ],
+            )
+        except Exception as exc:  # classify onto the seam's vocabulary
+            raise _classify_gateway_error(exc) from exc
 
     def extract_jd(self, text: str) -> JDRequirements:
         return self._complete(

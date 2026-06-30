@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 import pytest
 
-from app.extraction.service import ExtractionError, extract_jd_requirements
+from app.extraction.service import extract_jd_requirements
+from app.llm.errors import GatewayError, InvalidModelOutput, ProviderUnavailable
 from app.llm.fake import FakeLLMGateway
 from app.llm.gateway import LLMGateway
 from app.llm.types import JDRequirements, ResumeFields, SkillJudgment
@@ -33,9 +36,14 @@ def test_returns_schema_valid_requirements():
     assert isinstance(result, JDRequirements)
 
 
-class _RaisingGateway(LLMGateway):
-    def extract_jd(self, text: str) -> JDRequirements:
-        raise ValueError("unparseable model output")
+class _Gateway(LLMGateway):
+    """A gateway whose extract_jd raises or returns whatever a test supplies."""
+
+    def __init__(self, on_extract_jd) -> None:
+        self._on_extract_jd = on_extract_jd
+
+    def extract_jd(self, text: str):
+        return self._on_extract_jd()
 
     def extract_resume(self, text: str) -> ResumeFields:  # pragma: no cover
         raise NotImplementedError
@@ -44,6 +52,30 @@ class _RaisingGateway(LLMGateway):
         raise NotImplementedError
 
 
-def test_provider_failure_becomes_extraction_error():
-    with pytest.raises(ExtractionError):
-        extract_jd_requirements(_RaisingGateway(), "متن")
+def _raise(exc):
+    def _f():
+        raise exc
+
+    return _f
+
+
+def test_unclassified_gateway_exception_becomes_provider_unavailable():
+    # A raw, untyped exception from the gateway is treated as transient.
+    with pytest.raises(ProviderUnavailable):
+        extract_jd_requirements(_Gateway(_raise(ConnectionError("boom"))), "متن")
+
+
+def test_typed_gateway_error_propagates_unchanged():
+    # An adapter that already classified its failure is not reclassified.
+    err = InvalidModelOutput("off schema")
+    with pytest.raises(InvalidModelOutput):
+        extract_jd_requirements(_Gateway(_raise(err)), "متن")
+    # And it's still catchable as the base, for graceful degradation.
+    assert isinstance(err, GatewayError)
+
+
+def test_off_schema_output_at_the_boundary_is_invalid_model_output():
+    # Gateway returns something whose model_dump fails JDRequirements validation.
+    bad = SimpleNamespace(model_dump=lambda: {"min_years_experience": "not-an-int"})
+    with pytest.raises(InvalidModelOutput):
+        extract_jd_requirements(_Gateway(lambda: bad), "متن")

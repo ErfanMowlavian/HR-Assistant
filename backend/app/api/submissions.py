@@ -10,7 +10,7 @@ from app.db import get_db
 from app.deps import get_gateway
 from app.extraction import extract_resume_fields
 from app.extraction.pdf import PdfExtractionError, extract_pdf_text, looks_garbled
-from app.extraction.service import ExtractionError
+from app.llm.errors import GatewayError
 from app.llm.gateway import LLMGateway
 from app.models import JobDescription, Submission
 from app.schemas import SubmissionCreate, SubmissionRead
@@ -54,7 +54,7 @@ def _create_submission(
     try:
         fields = extract_resume_fields(gateway, resume_text)
         submission.resume_fields = fields.model_dump()
-    except ExtractionError:
+    except GatewayError:
         submission.resume_fields = None
 
     db.add(submission)

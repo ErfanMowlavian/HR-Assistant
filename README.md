@@ -227,7 +227,8 @@ backend/
     llm/
       gateway.py       LLMGateway abstract interface
       fake.py          FakeLLMGateway (tests / offline)
-      litellm_gateway.py  LiteLLMGateway (production, lazy imports)
+      litellm_gateway.py  LiteLLMGateway (production, lazy imports) + error classifier
+      errors.py        typed gateway failures: ProviderUnavailable / InvalidModelOutput
       types.py         JDRequirements, ResumeFields, SkillJudgment
   tests/
     test_jobs_api.py            Seam 3 — create JD → appears in list
@@ -248,6 +249,7 @@ backend/
     test_gap_report_api.py      gap report read-only — never alters ranking
     test_judging.py             per-skill judging: required/nice split, graceful
     test_evaluation_read.py     Evaluation→API deserializer: round-trip, drift
+    test_gateway_errors.py      failure classifier: provider-down vs off-schema
 frontend/
   src/app/             RTL layout + nav (Vazirmatn); / HR dashboard, /apply applicant
   src/components/      Create-JD form, JD list, requirements editor, ranking panel, header, ui/
