@@ -34,9 +34,17 @@ def test_applicant_submits_resume_and_fields_are_extracted(client):
     body = resp.json()
     assert body["job_id"] == job_id
     assert body["applicant_name"] == "سارا رضایی"
-    assert body["extraction_ok"] is True
-    assert body["resume_fields"]["skills"] == ["Python", "ری‌اکت"]
-    assert body["resume_fields"]["total_years_experience"] == 6.0
+    # Scoring is async (ADR-0013): create returns immediately as "processing",
+    # before the model has run, so fields aren't populated on this response.
+    assert body["status"] == "processing"
+
+    # The background task (run synchronously by TestClient) has since extracted
+    # the fields; the polled submission reflects the finished result.
+    scored = client.get(f"/api/jobs/{job_id}/submissions/{body['id']}").json()
+    assert scored["status"] == "done"
+    assert scored["extraction_ok"] is True
+    assert scored["resume_fields"]["skills"] == ["Python", "ری‌اکت"]
+    assert scored["resume_fields"]["total_years_experience"] == 6.0
 
 
 def test_mixed_script_resume_text_preserved_verbatim(client):

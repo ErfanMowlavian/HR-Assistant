@@ -66,6 +66,9 @@ class SubmissionRead(BaseModel):
     applicant_name: str
     resume_text: str
     resume_fields: ResumeFields | None = None
+    # "processing" until background scoring finishes, then "done" / "failed".
+    # Clients poll on this rather than blocking on the slow LLM work.
+    status: str = "done"
     created_at: datetime
 
     @computed_field

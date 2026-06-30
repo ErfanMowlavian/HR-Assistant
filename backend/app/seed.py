@@ -57,6 +57,7 @@ def seed(
             applicant_name=resume.applicant_name,
             resume_text=resume.resume_text,
             resume_fields=resume.resume_fields.model_dump(),
+            status="done",  # seeded submissions are scored synchronously below
         )
         db.add(submission)
         db.flush()  # assign submission.id before scoring

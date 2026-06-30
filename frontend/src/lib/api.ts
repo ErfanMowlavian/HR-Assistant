@@ -64,14 +64,32 @@ export interface ResumeFields {
   education: string | null;
 }
 
+export type SubmissionStatus = "processing" | "done" | "failed";
+
 export interface Submission {
   id: number;
   job_id: number;
   applicant_name: string;
   resume_text: string;
   resume_fields: ResumeFields | null;
+  // Scoring is asynchronous: "processing" right after submit, then "done"
+  // (extracted + scored) or "failed". The apply page polls until it settles.
+  status: SubmissionStatus;
   created_at: string;
   extraction_ok: boolean;
+}
+
+// Poll one submission — used by the apply page to watch status move from
+// "processing" to "done" after the background scoring finishes.
+export async function getSubmission(
+  jobId: number,
+  submissionId: number
+): Promise<Submission> {
+  return handle(
+    await fetch(`/api/jobs/${jobId}/submissions/${submissionId}`, {
+      cache: "no-store",
+    })
+  );
 }
 
 export async function createSubmission(

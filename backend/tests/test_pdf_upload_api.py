@@ -40,9 +40,10 @@ def test_clean_pdf_creates_a_usable_submission(client, monkeypatch):
 
     res = _upload(client, job_id)
     assert res.status_code == 201
-    body = res.json()
-    # Travels the same path as pasted text: fields extracted, then ranked.
-    assert body["extraction_ok"] is True
+    # Scoring is async (ADR-0013): the upload returns "processing" immediately.
+    assert res.json()["status"] == "processing"
+    # Travels the same path as pasted text: once the background task runs (done
+    # synchronously by TestClient), the candidate is extracted and ranked.
     ranking = client.get(f"/api/jobs/{job_id}/ranking").json()
     assert len(ranking) == 1
     assert ranking[0]["evaluation"] is not None

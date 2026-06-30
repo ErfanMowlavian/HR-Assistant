@@ -14,7 +14,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from app.db import Base, get_db
+from app.db import Base, get_db, get_sessionmaker
 from app.deps import get_gateway
 from app.llm.fake import FakeLLMGateway
 from app.main import create_app
@@ -58,6 +58,9 @@ def client() -> Iterator[TestClient]:
 
     app = create_app()
     app.dependency_overrides[get_db] = override_get_db
+    # Background scoring opens its own session from this factory; point it at
+    # the same in-memory DB the request used.
+    app.dependency_overrides[get_sessionmaker] = lambda: TestingSession
     app.dependency_overrides[get_gateway] = lambda: FakeLLMGateway()
 
     with TestClient(app) as c:

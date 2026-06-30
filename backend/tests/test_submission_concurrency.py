@@ -20,7 +20,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session, sessionmaker
 
-from app.db import Base, get_db, make_engine
+from app.db import Base, get_db, get_sessionmaker, make_engine
 from app.deps import get_gateway
 from app.llm.fake import FakeLLMGateway
 from app.llm.types import SkillJudgment
@@ -64,6 +64,7 @@ def file_client(tmp_path) -> Iterator[TestClient]:
     gateway = BarrierGateway(parties=2)
     app = create_app()
     app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_sessionmaker] = lambda: TestingSession
     app.dependency_overrides[get_gateway] = lambda: gateway
 
     with TestClient(app) as c:

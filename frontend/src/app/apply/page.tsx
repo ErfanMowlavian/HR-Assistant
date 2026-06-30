@@ -17,6 +17,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   createSubmission,
   getGapReport,
+  getSubmission,
   listJobs,
   uploadResume,
   type GapReport,
@@ -38,6 +39,8 @@ export default function ApplyPage() {
   const [gap, setGap] = React.useState<GapReport | null>(null);
   const [gapLoading, setGapLoading] = React.useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  // Guards async polling against a unmounted component / superseded submission.
+  const pollingFor = React.useRef<number | null>(null);
 
   React.useEffect(() => {
     listJobs()
@@ -45,6 +48,31 @@ export default function ApplyPage() {
       .catch((e) => setError(e instanceof Error ? e.message : "خطا"))
       .finally(() => setLoading(false));
   }, []);
+
+  React.useEffect(() => () => {
+    pollingFor.current = null; // stop polling on unmount
+  }, []);
+
+  // Scoring is asynchronous: a fresh submission comes back "processing". Poll
+  // until the backend finishes extracting + scoring it, then show the result.
+  async function pollUntilScored(submission: Submission) {
+    if (submission.status !== "processing") return;
+    pollingFor.current = submission.id;
+    for (let attempt = 0; attempt < 60; attempt++) {
+      await new Promise((r) => setTimeout(r, 2000));
+      if (pollingFor.current !== submission.id) return; // superseded/unmounted
+      try {
+        const latest = await getSubmission(submission.job_id, submission.id);
+        if (pollingFor.current !== submission.id) return;
+        if (latest.status !== "processing") {
+          setResult(latest);
+          return;
+        }
+      } catch {
+        /* transient; keep polling */
+      }
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -59,6 +87,7 @@ export default function ApplyPage() {
       });
       setResult(submission);
       setResume("");
+      void pollUntilScored(submission);
     } catch (err) {
       setError(err instanceof Error ? err.message : "خطای ناشناخته");
     } finally {
@@ -77,6 +106,7 @@ export default function ApplyPage() {
       const submission = await uploadResume(selectedId, name.trim(), file);
       setResult(submission);
       setResume("");
+      void pollUntilScored(submission);
     } catch (err) {
       // The backend nudges to paste when a PDF extracts to garbled text.
       setError(err instanceof Error ? err.message : "خطای ناشناخته");
@@ -239,7 +269,18 @@ export default function ApplyPage() {
                   <p className="font-medium text-foreground">
                     رزومهٔ شما با موفقیت ثبت شد. ✔
                   </p>
-                  {result.extraction_ok && result.resume_fields ? (
+                  {result.status === "processing" ? (
+                    <p className="mt-1 flex items-center gap-2 text-muted-foreground">
+                      <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
+                      در حال بررسی و استخراج مهارت‌ها… این کار ممکن است چند لحظه
+                      طول بکشد.
+                    </p>
+                  ) : result.status === "failed" ? (
+                    <p className="mt-1 text-muted-foreground">
+                      رزومه ذخیره شد، اما بررسی خودکار با خطا مواجه شد. تیم
+                      استخدام رزومهٔ شما را به‌صورت دستی بررسی خواهد کرد.
+                    </p>
+                  ) : result.extraction_ok && result.resume_fields ? (
                     <p className="mt-1 text-muted-foreground">
                       مهارت‌های شناسایی‌شده:{" "}
                       {result.resume_fields.skills.join("، ") || "—"}

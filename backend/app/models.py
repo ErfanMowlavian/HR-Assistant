@@ -57,6 +57,15 @@ class Submission(Base):
     # Structured fields extracted from the resume. Null until extraction
     # succeeds. Shape: ResumeFields.
     resume_fields: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    # Background-scoring lifecycle: "processing" while the resume is being
+    # extracted + judged (slow LLM work), then "done" (whatever the result) or
+    # "failed" on an unexpected error. Lets the applicant get an instant
+    # response and the UI poll, instead of blocking on the model (ADR-0013).
+    # server_default "done": rows from before async scoring were scored at
+    # submit time, so they are already complete.
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="processing", server_default="done"
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow, nullable=False
     )

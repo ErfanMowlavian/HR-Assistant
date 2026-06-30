@@ -51,6 +51,28 @@ def init_db() -> None:
     from app import models  # noqa: F401  (register mappers)
 
     Base.metadata.create_all(bind=engine)
+    _add_submission_status_column(engine)
+
+
+def _add_submission_status_column(bind) -> None:
+    """Additive migration: databases created before async scoring lack
+    submissions.status. Add it, defaulting existing rows to 'done' (they were
+    scored synchronously at submit time). No-op once the column exists.
+    """
+    from sqlalchemy import inspect, text
+
+    inspector = inspect(bind)
+    if "submissions" not in inspector.get_table_names():
+        return
+    columns = {c["name"] for c in inspector.get_columns("submissions")}
+    if "status" not in columns:
+        with bind.begin() as conn:
+            conn.execute(
+                text(
+                    "ALTER TABLE submissions "
+                    "ADD COLUMN status VARCHAR(16) NOT NULL DEFAULT 'done'"
+                )
+            )
 
 
 def get_db() -> Iterator[Session]:
@@ -60,3 +82,15 @@ def get_db() -> Iterator[Session]:
         yield db
     finally:
         db.close()
+
+
+def get_sessionmaker() -> sessionmaker:
+    """FastAPI dependency returning the session *factory*.
+
+    Background tasks outlive the request (and its `get_db` session is closed
+    when the response is sent), so they must open their own session. Injecting
+    the factory — rather than importing `SessionLocal` directly — keeps the
+    background worker pointed at whatever database the request used, which lets
+    tests override it onto their isolated DB.
+    """
+    return SessionLocal
