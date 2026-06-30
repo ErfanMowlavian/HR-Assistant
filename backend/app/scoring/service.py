@@ -99,3 +99,24 @@ def upsert_evaluation(
     evaluation.submission = submission
     db.add(evaluation)
     return evaluation
+
+
+def rescore_job(
+    db: Session,
+    job: JobDescription,
+    gateway: LLMGateway,
+    *,
+    weights: ScoreWeights = DEFAULT_WEIGHTS,
+) -> list[Evaluation]:
+    """Re-score every submission of a JD against its current requirements.
+
+    The one home for "fan over a JD's submissions and upsert each Evaluation",
+    used when HR edits the requirements and by the live "rank now" action.
+    A no-op per submission when the JD has no requirements yet. Does not commit —
+    the caller owns the transaction boundary.
+    """
+    evaluations = [
+        upsert_evaluation(db, submission, job, gateway, weights=weights)
+        for submission in job.submissions
+    ]
+    return [e for e in evaluations if e is not None]

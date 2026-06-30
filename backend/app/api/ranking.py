@@ -21,7 +21,7 @@ from app.deps import get_gateway
 from app.llm.gateway import LLMGateway
 from app.models import JobDescription, Submission
 from app.schemas import EvaluationRead, RankedCandidate
-from app.scoring import upsert_evaluation
+from app.scoring import rescore_job
 
 router = APIRouter(prefix="/api/jobs/{job_id}", tags=["ranking"])
 
@@ -87,7 +87,6 @@ def rank_now(
     A no-op per submission when the JD has no extracted requirements.
     """
     job = _job_or_404(db, job_id)
-    for submission in job.submissions:
-        upsert_evaluation(db, submission, job, gateway)
+    rescore_job(db, job, gateway)
     db.commit()
     return _ranked(db, job_id)

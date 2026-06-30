@@ -14,7 +14,7 @@ from app.llm.errors import GatewayError
 from app.llm.gateway import LLMGateway
 from app.models import JobDescription
 from app.schemas import JobDescriptionCreate, JobDescriptionRead, RequirementsUpdate
-from app.scoring import upsert_evaluation
+from app.scoring import rescore_job
 
 router = APIRouter(prefix="/api/jobs", tags=["jobs"])
 
@@ -80,8 +80,7 @@ def update_requirements(
     db.add(job)
     db.flush()
 
-    for submission in job.submissions:
-        upsert_evaluation(db, submission, job, gateway)
+    rescore_job(db, job, gateway)
 
     db.commit()
     db.refresh(job)

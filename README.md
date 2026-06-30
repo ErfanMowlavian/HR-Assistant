@@ -250,6 +250,7 @@ backend/
     test_judging.py             per-skill judging: required/nice split, graceful
     test_evaluation_read.py     Evaluation→API deserializer: round-trip, drift
     test_gateway_errors.py      failure classifier: provider-down vs off-schema
+    test_scoring_service.py     upsert_evaluation / rescore_job orchestration
 frontend/
   src/app/             RTL layout + nav (Vazirmatn); / HR dashboard, /apply applicant
   src/components/      Create-JD form, JD list, requirements editor, ranking panel, header, ui/
