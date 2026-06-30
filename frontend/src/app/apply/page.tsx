@@ -17,6 +17,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   createSubmission,
   listJobs,
+  uploadResume,
   type JobDescription,
   type Submission,
 } from "@/lib/api";
@@ -29,8 +30,10 @@ export default function ApplyPage() {
   const [name, setName] = React.useState("");
   const [resume, setResume] = React.useState("");
   const [submitting, setSubmitting] = React.useState(false);
+  const [uploading, setUploading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [result, setResult] = React.useState<Submission | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   React.useEffect(() => {
     listJobs()
@@ -59,11 +62,32 @@ export default function ApplyPage() {
     }
   }
 
+  async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-selecting the same file after an error
+    if (!file || selectedId === null) return;
+    setUploading(true);
+    setError(null);
+    setResult(null);
+    try {
+      const submission = await uploadResume(selectedId, name.trim(), file);
+      setResult(submission);
+      setResume("");
+    } catch (err) {
+      // The backend nudges to paste when a PDF extracts to garbled text.
+      setError(err instanceof Error ? err.message : "خطای ناشناخته");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  const busy = submitting || uploading;
   const canSubmit =
     selectedId !== null &&
     name.trim().length > 0 &&
     resume.trim().length > 0 &&
-    !submitting;
+    !busy;
+  const canUpload = selectedId !== null && name.trim().length > 0 && !busy;
 
   return (
     <main className="container max-w-3xl py-10">
@@ -148,13 +172,36 @@ export default function ApplyPage() {
                   />
                 </div>
                 {error && <p className="text-sm text-destructive">{error}</p>}
-                <Button type="submit" disabled={!canSubmit}>
-                  {submitting
-                    ? "در حال ارسال…"
-                    : selectedId === null
-                      ? "ابتدا یک آگهی انتخاب کنید"
-                      : "ارسال رزومه"}
-                </Button>
+                <div className="flex flex-wrap items-center gap-3">
+                  <Button type="submit" disabled={!canSubmit}>
+                    {submitting
+                      ? "در حال ارسال…"
+                      : selectedId === null
+                        ? "ابتدا یک آگهی انتخاب کنید"
+                        : "ارسال رزومه"}
+                  </Button>
+                  <span className="text-sm text-muted-foreground">یا</span>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="application/pdf,.pdf"
+                    className="hidden"
+                    onChange={handleUpload}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={!canUpload}
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    {uploading ? "در حال پردازش PDF…" : "آپلود PDF"}
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  وارد کردن متن، مسیر اصلی و مطمئن است. آپلود PDF بهترین تلاش است؛
+                  اگر متن فارسی درست استخراج نشود، از شما خواسته می‌شود متن را وارد
+                  کنید.
+                </p>
               </form>
 
               {result && (

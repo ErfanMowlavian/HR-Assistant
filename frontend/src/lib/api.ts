@@ -86,6 +86,33 @@ export async function createSubmission(
   return handle(res);
 }
 
+// Best-effort PDF upload (Issue #8). On a garbled/unparseable PDF the backend
+// replies 422 with a Persian message nudging the applicant to paste instead;
+// we surface that exact message rather than a generic error.
+export async function uploadResume(
+  jobId: number,
+  applicantName: string,
+  file: File
+): Promise<Submission> {
+  const form = new FormData();
+  form.append("applicant_name", applicantName);
+  form.append("file", file);
+  const res = await fetch(`/api/jobs/${jobId}/submissions/upload`, {
+    method: "POST",
+    body: form,
+  });
+  if (!res.ok) {
+    let detail: string | undefined;
+    try {
+      detail = (await res.json())?.detail;
+    } catch {
+      /* non-JSON error body */
+    }
+    throw new Error(detail ?? `خطای سرور (${res.status})`);
+  }
+  return (await res.json()) as Submission;
+}
+
 // --- Scoring & ranking (Issue #5) ---
 
 export type SkillVerdict = "yes" | "partial" | "no";

@@ -13,6 +13,10 @@ dependencies = [
     # test path (fake gateway) never touches them or the network.
     "litellm>=1.40",
     "instructor>=1.3",
+    # Best-effort PDF resume upload (#8): pypdf for text extraction,
+    # python-multipart for the multipart/form-data upload endpoint.
+    "pypdf>=4.0",
+    "python-multipart>=0.0.9",
 ]
 
 [project.optional-dependencies]

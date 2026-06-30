@@ -64,6 +64,15 @@ Implemented so far:
   action (`POST /api/jobs/{id}/rank`) re-runs the pipeline **live** for a JD —
   the on-demand proof that scoring works. See [Demo mode](#demo-mode-issue-7).
 
+- **Issue #8 — best-effort PDF resume upload.** Applicants can **upload a PDF**
+  as an alternative to pasting (`POST /api/jobs/{id}/submissions/upload`). Text
+  is extracted with `pypdf` and feeds the **exact same** Submission → extraction
+  → scoring path as pasted text. Persian PDFs often extract badly, so a
+  **garbled-text heuristic** (too short, replacement characters, or dominated by
+  non-letter symbols) rejects broken extractions with a **422 nudge to paste** —
+  so a bad PDF can never silently produce a corrupted Evaluation. Paste remains
+  the primary, reliable path.
+
 Tests run entirely against the fake gateway — no real model call.
 
 ## Architecture
@@ -187,11 +196,12 @@ backend/
     schemas.py         Pydantic request/response
     deps.py            get_gateway() — the injectable LLM seam
     api/jobs.py        create (+extract) / list / get / PATCH requirements (re-scores)
-    api/submissions.py applicant submit (+extract +score) / list per JD
+    api/submissions.py applicant submit (paste) / upload PDF / list per JD
     api/ranking.py     GET ranked candidates (stored, no model) / POST rank (live)
     seed.py            `python -m app.seed` — demo JD + resumes + stored Evaluations
     extraction/
       normalize.py     Persian/Arabic digit → Latin folding
+      pdf.py           best-effort PDF text extraction + garbled-Persian heuristic
       service.py       extract_jd_requirements / extract_resume_fields
     scoring/
       weights.py       ScoreWeights + shipped defaults
@@ -220,6 +230,8 @@ backend/
     test_eval_harness.py        Gold Set eval: reproducible P@3 / nDCG
     test_seed.py                demo seed: JD + resumes + stored Evaluations, offline
     test_rank_now_api.py        "rank now" re-runs scoring live, best-first
+    test_pdf.py                 PDF extraction + garbled-Persian heuristic (pure)
+    test_pdf_upload_api.py      upload: clean PDF → submission, garbled → paste nudge
 frontend/
   src/app/             RTL layout + nav (Vazirmatn); / HR dashboard, /apply applicant
   src/components/      Create-JD form, JD list, requirements editor, ranking panel, header, ui/
