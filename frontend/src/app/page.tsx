@@ -2,8 +2,8 @@
 
 import * as React from "react";
 
-import { CreateJobForm } from "@/components/create-job-form";
-import { JobList } from "@/components/job-list";
+import { CreateJobForm } from "@/components/dashboard/create-job-form";
+import { JobList } from "@/components/dashboard/job-list";
 import { listJobs, type JobDescription } from "@/lib/api";
 
 export default function HomePage() {

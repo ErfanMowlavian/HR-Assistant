@@ -253,6 +253,35 @@ backend/
     test_scoring_service.py     upsert_evaluation / rescore_job orchestration
 frontend/
   src/app/             RTL layout + nav (Vazirmatn); / HR dashboard, /apply applicant
-  src/components/      Create-JD form, JD list, requirements editor, ranking panel, header, ui/
+  src/components/
+    ui/                shadcn primitives (button, card, input, …)
+    layout/            app chrome (site-header)
+    dashboard/         HR-dashboard features (create-job-form, job-list,
+                       requirements-editor, ranking-panel)
   src/lib/api.ts       Backend client
 ```
+
+### Layout conventions
+
+The structure follows a few explicit rules, so the granularity is intentional
+rather than incidental:
+
+- **`backend/app/` root** holds the FastAPI app surface — the factory + infra
+  (`main`, `config`, `db`, `deps`), the data contracts (`models`, `schemas`),
+  cross-cutting single-responsibility services (`judging`, `gap`), shared
+  utilities (`normalize`), and the demo entrypoint (`seed`).
+- **A capability becomes a package** (`llm/`, `scoring/`, `extraction/`,
+  `eval/`) once it spans more than one module — e.g. the gateway seam is an
+  interface plus two adapters plus typed errors. Single-module concerns stay
+  single modules; no one-file packages.
+- **Routers live under `api/`**, one per resource, and stay thin — request →
+  delegate to a service/orchestrator → response.
+- **Orchestration that spans entities lives in a package `service.py`**
+  (`scoring.rescore_job`, `scoring.upsert_evaluation`); a single-entity create
+  may keep a small helper in its router (`submissions._create_submission`).
+- **Frontend components** are grouped by role: `ui/` primitives, `layout/`
+  chrome, and feature folders (`dashboard/`). Pages compose from these.
+- **Tests mirror modules** one-to-one (`test_scorer`, `test_judging`,
+  `test_scoring_service`, …) with shared fixtures in `conftest.py`.
+- **`docs/`** holds the PRD, glossary, domain model, and numbered ADRs
+  (`decisions/`) — every non-obvious structural decision is recorded there.

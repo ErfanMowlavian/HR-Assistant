@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Vazirmatn } from "next/font/google";
-import { SiteHeader } from "@/components/site-header";
+import { SiteHeader } from "@/components/layout/site-header";
 import "./globals.css";
 
 const vazirmatn = Vazirmatn({

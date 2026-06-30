@@ -1,8 +1,8 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { RequirementsEditor } from "@/components/requirements-editor";
-import { RankingPanel } from "@/components/ranking-panel";
+import { RequirementsEditor } from "@/components/dashboard/requirements-editor";
+import { RankingPanel } from "@/components/dashboard/ranking-panel";
 import type { JobDescription } from "@/lib/api";
 
 function formatDate(iso: string): string {
