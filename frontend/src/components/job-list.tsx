@@ -2,6 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RequirementsEditor } from "@/components/requirements-editor";
+import { RankingPanel } from "@/components/ranking-panel";
 import type { JobDescription } from "@/lib/api";
 
 function formatDate(iso: string): string {
@@ -49,6 +50,7 @@ export function JobList({
               {job.text}
             </p>
             <RequirementsEditor job={job} onUpdated={onJobUpdated} />
+            <RankingPanel jobId={job.id} />
           </CardContent>
         </Card>
       ))}

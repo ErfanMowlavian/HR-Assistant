@@ -31,6 +31,20 @@ Implemented so far:
   judgment (#5). Failed extraction is graceful (fields null + flagged), same as
   JD extraction.
 
+- **Issue #5 — scoring & ranked HR dashboard (the core).** For each Submission
+  the gateway judges every JD skill (required + nice-to-have) against the resume
+  as **yes / partial / no**, and a **deterministic scorer** (a pure function —
+  the second test seam) aggregates those judgments with experience and
+  education into a weighted **Match Score** and per-criterion **breakdown**,
+  stored as an **Evaluation** (one per Submission). Submissions are scored on
+  arrival and re-scored when HR edits the JD's requirements, so HR opens a JD
+  and sees its candidates **ranked best-match first** (`GET
+  /api/jobs/{id}/ranking`) — each with its score breakdown and per-skill
+  verdicts — rendered instantly from stored results. Persian/English skill
+  synonyms ("React" == "ری‌اکت") are matched by the gateway's judgment, not by
+  string equality. **Default weights ship** (required-skill coverage weighted
+  highest) and are passed into the scorer, so they can be overridden later.
+
 Tests run entirely against the fake gateway — no real model call.
 
 ## Architecture
@@ -46,7 +60,10 @@ The **three test seams** the PRD calls for are established here:
    `extract_resume`, `judge_skill`) with a `FakeLLMGateway` for tests and a
    `LiteLLMGateway` for production (provider-agnostic via `.env`). Injected as a
    FastAPI dependency, so every test runs with no real model call.
-2. **Scorer** — a pure function; lands in slice #5.
+2. **Scorer** (`backend/app/scoring/`) — a pure function `(JD requirements,
+   per-skill judgments, resume fields, weights) → Match Score + breakdown`. No
+   I/O, no model call: same inputs always yield the same ranking, so the
+   ranking is auditable. Unit-tested directly over crafted inputs.
 3. **HTTP API** — FastAPI `TestClient` behavior tests (`backend/tests/`).
 
 ## Prerequisites
@@ -96,14 +113,19 @@ backend/
     main.py            FastAPI app factory + CORS + lifespan (create tables)
     config.py          Settings from .env (DB + LLM provider)
     db.py              SQLite engine, session, get_db dependency
-    models.py          ORM: JobDescription, Submission
+    models.py          ORM: JobDescription, Submission, Evaluation
     schemas.py         Pydantic request/response
     deps.py            get_gateway() — the injectable LLM seam
-    api/jobs.py        create (+extract) / list / get / PATCH requirements
-    api/submissions.py applicant submit (+extract) / list per JD
+    api/jobs.py        create (+extract) / list / get / PATCH requirements (re-scores)
+    api/submissions.py applicant submit (+extract +score) / list per JD
+    api/ranking.py     GET ranked candidates for a JD (best-match first)
     extraction/
       normalize.py     Persian/Arabic digit → Latin folding
       service.py       extract_jd_requirements / extract_resume_fields
+    scoring/
+      weights.py       ScoreWeights + shipped defaults
+      scorer.py        score() — the pure deterministic scorer (Seam 2)
+      service.py       per-skill judgments (LLM) → score → persist Evaluation
     llm/
       gateway.py       LLMGateway abstract interface
       fake.py          FakeLLMGateway (tests / offline)
@@ -116,8 +138,10 @@ backend/
     test_extraction_service.py  normalize→extract→validate
     test_jd_extraction_api.py   extract on create, review/edit, graceful fail
     test_submissions_api.py     submit → stored with fields, scoping, graceful
+    test_scorer.py              Seam 2 — pure scorer: coverage, experience, weights
+    test_ranking_api.py         submit → ranked best-first, breakdown, synonyms
 frontend/
   src/app/             RTL layout + nav (Vazirmatn); / HR dashboard, /apply applicant
-  src/components/      Create-JD form, JD list, requirements editor, header, ui/
+  src/components/      Create-JD form, JD list, requirements editor, ranking panel, header, ui/
   src/lib/api.ts       Backend client
 ```

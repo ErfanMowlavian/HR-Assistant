@@ -23,6 +23,7 @@ class FakeLLMGateway(LLMGateway):
         jd: JDRequirements | None = None,
         resume: ResumeFields | None = None,
         judgment: SkillJudgment | None = None,
+        judgments: dict[str, SkillVerdict] | None = None,
     ) -> None:
         self._jd = jd or JDRequirements(
             required_skills=["Python", "FastAPI"],
@@ -38,6 +39,7 @@ class FakeLLMGateway(LLMGateway):
             education="کارشناسی",
         )
         self._judgment = judgment
+        self._judgments = judgments or {}
 
     def extract_jd(self, text: str) -> JDRequirements:
         return self._jd
@@ -46,8 +48,15 @@ class FakeLLMGateway(LLMGateway):
         return self._resume
 
     def judge_skill(self, skill: str, resume_text: str) -> SkillJudgment:
+        # A single forced verdict wins (used by broken/edge-case tests).
         if self._judgment is not None:
             return self._judgment
+        # Otherwise a per-skill map lets a test model real LLM judgment —
+        # including Persian/English synonyms ("React" == "ری‌اکت") that a
+        # string match would miss.
+        if skill in self._judgments:
+            return SkillJudgment(skill=skill, verdict=self._judgments[skill])
+        # Fallback: naive substring presence, enough for coverage-based ranking.
         verdict = (
             SkillVerdict.YES
             if skill.lower() in resume_text.lower()

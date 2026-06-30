@@ -85,3 +85,48 @@ export async function createSubmission(
   });
   return handle(res);
 }
+
+// --- Scoring & ranking (Issue #5) ---
+
+export type SkillVerdict = "yes" | "partial" | "no";
+
+export interface ComponentScore {
+  key: string;
+  label: string;
+  applicable: boolean;
+  score: number | null;
+  weight: number;
+  contribution: number;
+}
+
+export interface SkillJudgment {
+  skill: string;
+  verdict: SkillVerdict;
+  reason: string | null;
+  kind: "required" | "nice";
+}
+
+export interface ScoreWeights {
+  required_skills: number;
+  nice_to_have_skills: number;
+  experience: number;
+  education: number;
+}
+
+export interface Evaluation {
+  match_score: number;
+  components: ComponentScore[];
+  judgments: SkillJudgment[];
+  weights: ScoreWeights;
+}
+
+export interface RankedCandidate {
+  submission_id: number;
+  applicant_name: string;
+  created_at: string;
+  evaluation: Evaluation | null;
+}
+
+export async function getRanking(jobId: number): Promise<RankedCandidate[]> {
+  return handle(await fetch(`/api/jobs/${jobId}/ranking`, { cache: "no-store" }));
+}

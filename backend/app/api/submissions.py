@@ -13,6 +13,7 @@ from app.extraction.service import ExtractionError
 from app.llm.gateway import LLMGateway
 from app.models import JobDescription, Submission
 from app.schemas import SubmissionCreate, SubmissionRead
+from app.scoring import upsert_evaluation
 
 router = APIRouter(prefix="/api/jobs/{job_id}/submissions", tags=["submissions"])
 
@@ -31,7 +32,7 @@ def create_submission(
     db: Session = Depends(get_db),
     gateway: LLMGateway = Depends(get_gateway),
 ) -> Submission:
-    _job_or_404(db, job_id)
+    job = _job_or_404(db, job_id)
 
     submission = Submission(
         job_id=job_id,
@@ -49,6 +50,12 @@ def create_submission(
         submission.resume_fields = None
 
     db.add(submission)
+    db.flush()  # assign submission.id before scoring
+
+    # Score the submission against its JD right away (story #11) so HR's ranked
+    # view is ready from stored results. No-op if the JD has no requirements yet.
+    upsert_evaluation(db, submission, job, gateway)
+
     db.commit()
     db.refresh(submission)
     return submission

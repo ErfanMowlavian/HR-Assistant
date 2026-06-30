@@ -14,6 +14,7 @@ from app.extraction.service import ExtractionError
 from app.llm.gateway import LLMGateway
 from app.models import JobDescription
 from app.schemas import JobDescriptionCreate, JobDescriptionRead, RequirementsUpdate
+from app.scoring import upsert_evaluation
 
 router = APIRouter(prefix="/api/jobs", tags=["jobs"])
 
@@ -65,15 +66,23 @@ def update_requirements(
     job_id: int,
     payload: RequirementsUpdate,
     db: Session = Depends(get_db),
+    gateway: LLMGateway = Depends(get_gateway),
 ) -> JobDescription:
     """HR reviews and corrects the extracted requirements before they're used.
 
     The payload is validated against the JDRequirements schema, so a bad edit
-    can't silently corrupt the ranking inputs.
+    can't silently corrupt the ranking inputs. Correcting the requirements
+    changes what every candidate is scored against, so each of the JD's
+    submissions is re-evaluated against the new requirements.
     """
     job = _get_or_404(db, job_id)
     job.requirements = payload.model_dump()
     db.add(job)
+    db.flush()
+
+    for submission in job.submissions:
+        upsert_evaluation(db, submission, job, gateway)
+
     db.commit()
     db.refresh(job)
     return job

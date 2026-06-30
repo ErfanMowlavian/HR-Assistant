@@ -7,6 +7,8 @@ from datetime import datetime
 from pydantic import BaseModel, ConfigDict, Field, computed_field
 
 from app.llm.types import JDRequirements, ResumeFields
+from app.scoring.scorer import ComponentScore
+from app.scoring.weights import ScoreWeights
 
 
 class JobDescriptionCreate(BaseModel):
@@ -66,3 +68,34 @@ class SubmissionRead(BaseModel):
     @property
     def extraction_ok(self) -> bool:
         return self.resume_fields is not None
+
+
+class SkillJudgmentRead(BaseModel):
+    """One per-skill judgment as shown to HR: which requirement, and the verdict."""
+
+    skill: str
+    verdict: str  # "yes" | "partial" | "no"
+    reason: str | None = None
+    kind: str  # "required" | "nice"
+
+
+class EvaluationRead(BaseModel):
+    """A Submission's Evaluation: Match Score, breakdown, per-skill judgments."""
+
+    match_score: float
+    components: list[ComponentScore]
+    judgments: list[SkillJudgmentRead]
+    weights: ScoreWeights
+
+
+class RankedCandidate(BaseModel):
+    """One row in a JD's ranked candidate list.
+
+    `evaluation` is null for submissions not yet scored (e.g. the JD had no
+    extracted requirements when they applied); those sort after scored ones.
+    """
+
+    submission_id: int
+    applicant_name: str
+    created_at: datetime
+    evaluation: EvaluationRead | None = None
