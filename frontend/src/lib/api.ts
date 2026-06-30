@@ -130,3 +130,9 @@ export interface RankedCandidate {
 export async function getRanking(jobId: number): Promise<RankedCandidate[]> {
   return handle(await fetch(`/api/jobs/${jobId}/ranking`, { cache: "no-store" }));
 }
+
+// "Rank now" (Issue #7): re-run the scoring pipeline live and return the fresh
+// ranking — the on-demand proof, separate from the stored-data read above.
+export async function rankNow(jobId: number): Promise<RankedCandidate[]> {
+  return handle(await fetch(`/api/jobs/${jobId}/rank`, { method: "POST" }));
+}

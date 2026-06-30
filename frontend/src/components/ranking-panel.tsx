@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   getRanking,
+  rankNow,
   type Evaluation,
   type RankedCandidate,
   type SkillVerdict,
@@ -104,6 +105,7 @@ export function RankingPanel({ jobId }: { jobId: number }) {
   const [open, setOpen] = React.useState(false);
   const [candidates, setCandidates] = React.useState<RankedCandidate[] | null>(null);
   const [loading, setLoading] = React.useState(false);
+  const [ranking, setRanking] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
   const load = React.useCallback(async () => {
@@ -118,11 +120,27 @@ export function RankingPanel({ jobId }: { jobId: number }) {
     }
   }, [jobId]);
 
+  // "Rank now": re-run the pipeline live (the read path above renders stored
+  // results without a model call; this proves scoring on demand).
+  const rankLive = React.useCallback(async () => {
+    setRanking(true);
+    setError(null);
+    try {
+      setCandidates(await rankNow(jobId));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "خطا");
+    } finally {
+      setRanking(false);
+    }
+  }, [jobId]);
+
   function toggle() {
     const next = !open;
     setOpen(next);
     if (next && candidates === null) void load();
   }
+
+  const busy = loading || ranking;
 
   return (
     <div className="border-t pt-3">
@@ -131,9 +149,14 @@ export function RankingPanel({ jobId }: { jobId: number }) {
           {open ? "▼" : "◀"} داوطلبان رتبه‌بندی‌شده
         </Button>
         {open && (
-          <Button variant="outline" size="sm" onClick={load} disabled={loading}>
-            {loading ? "در حال بارگذاری…" : "به‌روزرسانی"}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="default" size="sm" onClick={rankLive} disabled={busy}>
+              {ranking ? "در حال رتبه‌بندی…" : "رتبه‌بندی زنده"}
+            </Button>
+            <Button variant="outline" size="sm" onClick={load} disabled={busy}>
+              {loading ? "در حال بارگذاری…" : "به‌روزرسانی"}
+            </Button>
+          </div>
         )}
       </div>
 

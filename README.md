@@ -53,6 +53,17 @@ Implemented so far:
   baseline) or the real provider (headline number). See
   [Evaluation](#evaluation-issue-6).
 
+- **Issue #7 — demo mode: seed data + "rank now".** Demo robustness. A **seed
+  command** (`python -m app.seed`) loads one realistic Persian JD + ~10 resumes
+  from the Gold Set **with their Evaluations pre-computed and stored**, so HR
+  opens the dashboard and the ranked list renders **instantly with no live model
+  call** (the `GET /ranking` path has no gateway dependency at all). The seed
+  uses the deterministic fake gateway, so it works with the model provider
+  unreachable, and the seeded ranking has a clear, defensible top candidate
+  (سارا محمدی, 1.000, monotonically down to irrelevant ones). A **"rank now"**
+  action (`POST /api/jobs/{id}/rank`) re-runs the pipeline **live** for a JD —
+  the on-demand proof that scoring works. See [Demo mode](#demo-mode-issue-7).
+
 Tests run entirely against the fake gateway — no real model call.
 
 ## Architecture
@@ -128,6 +139,28 @@ number** comes from `--real`, where the model judges Persian/English skill
 variants semantically. The metric functions (`app/eval/metrics.py`) are pure and
 unit-tested independently.
 
+## Demo mode (Issue #7)
+
+For a live demo without depending on a model provider, seed the database with a
+realistic Persian JD + resumes whose Evaluations are **pre-computed and stored**:
+
+```bash
+cd backend
+source .venv/bin/activate
+
+python -m app.seed     # loads one JD + ~10 resumes + stored Evaluations
+```
+
+Then start the backend and open the HR dashboard — the ranked candidate list
+renders from stored data with **no live model call** (`GET /ranking` reads only
+stored Evaluations). The seed uses the deterministic fake gateway, so it works
+**with the model provider unreachable**, and produces a clear, defensible top
+candidate. Re-running the seed replaces the demo JD (idempotent).
+
+To prove the pipeline live, the ranking panel's **«رتبه‌بندی زنده» ("rank now")**
+button calls `POST /api/jobs/{id}/rank`, which re-judges every skill through the
+gateway and re-scores on demand.
+
 ## Frontend
 
 ```bash
@@ -155,7 +188,8 @@ backend/
     deps.py            get_gateway() — the injectable LLM seam
     api/jobs.py        create (+extract) / list / get / PATCH requirements (re-scores)
     api/submissions.py applicant submit (+extract +score) / list per JD
-    api/ranking.py     GET ranked candidates for a JD (best-match first)
+    api/ranking.py     GET ranked candidates (stored, no model) / POST rank (live)
+    seed.py            `python -m app.seed` — demo JD + resumes + stored Evaluations
     extraction/
       normalize.py     Persian/Arabic digit → Latin folding
       service.py       extract_jd_requirements / extract_resume_fields
@@ -184,6 +218,8 @@ backend/
     test_ranking_api.py         submit → ranked best-first, breakdown, synonyms
     test_eval_metrics.py        pure Precision@k / nDCG
     test_eval_harness.py        Gold Set eval: reproducible P@3 / nDCG
+    test_seed.py                demo seed: JD + resumes + stored Evaluations, offline
+    test_rank_now_api.py        "rank now" re-runs scoring live, best-first
 frontend/
   src/app/             RTL layout + nav (Vazirmatn); / HR dashboard, /apply applicant
   src/components/      Create-JD form, JD list, requirements editor, ranking panel, header, ui/
