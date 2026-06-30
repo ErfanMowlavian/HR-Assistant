@@ -19,23 +19,11 @@ from sqlalchemy.orm import Session
 from app.db import get_db
 from app.deps import get_gateway
 from app.llm.gateway import LLMGateway
-from app.models import Evaluation, JobDescription, Submission
+from app.models import JobDescription, Submission
 from app.schemas import EvaluationRead, RankedCandidate
 from app.scoring import upsert_evaluation
 
 router = APIRouter(prefix="/api/jobs/{job_id}", tags=["ranking"])
-
-
-def evaluation_read(evaluation: Evaluation | None) -> EvaluationRead | None:
-    """Rebuild the API view of an Evaluation from its stored JSON columns."""
-    if evaluation is None:
-        return None
-    return EvaluationRead(
-        match_score=evaluation.match_score,
-        components=evaluation.breakdown["components"],
-        judgments=evaluation.judgments,
-        weights=evaluation.weights,
-    )
 
 
 def _job_or_404(db: Session, job_id: int) -> JobDescription:
@@ -57,7 +45,9 @@ def _ranked(db: Session, job_id: int) -> list[RankedCandidate]:
             submission_id=s.id,
             applicant_name=s.applicant_name,
             created_at=s.created_at,
-            evaluation=evaluation_read(s.evaluation),
+            evaluation=(
+                EvaluationRead.from_evaluation(s.evaluation) if s.evaluation else None
+            ),
         )
         for s in submissions
     ]

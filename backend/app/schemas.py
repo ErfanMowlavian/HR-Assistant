@@ -3,12 +3,16 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field
 
 from app.llm.types import JDRequirements, ResumeFields
-from app.scoring.scorer import ComponentScore
+from app.scoring.scorer import ComponentScore, ScoreResult
 from app.scoring.weights import ScoreWeights
+
+if TYPE_CHECKING:
+    from app.models import Evaluation
 
 
 class JobDescriptionCreate(BaseModel):
@@ -86,6 +90,22 @@ class EvaluationRead(BaseModel):
     components: list[ComponentScore]
     judgments: list[SkillJudgmentRead]
     weights: ScoreWeights
+
+    @classmethod
+    def from_evaluation(cls, evaluation: "Evaluation") -> "EvaluationRead":
+        """Rebuild the API view from a stored Evaluation.
+
+        The breakdown JSON is read back through `ScoreResult`, so the model that
+        owns the breakdown shape is the only thing that spells its keys — a
+        rename surfaces as a validation error here, not a silent KeyError.
+        """
+        breakdown = ScoreResult.model_validate(evaluation.breakdown)
+        return cls(
+            match_score=evaluation.match_score,
+            components=breakdown.components,
+            judgments=evaluation.judgments,
+            weights=evaluation.weights,
+        )
 
 
 class GapReportRequest(BaseModel):

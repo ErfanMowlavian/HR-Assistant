@@ -247,6 +247,7 @@ backend/
     test_gap.py                 gap report builder: missing/partial, graceful (pure)
     test_gap_report_api.py      gap report read-only — never alters ranking
     test_judging.py             per-skill judging: required/nice split, graceful
+    test_evaluation_read.py     Evaluation→API deserializer: round-trip, drift
 frontend/
   src/app/             RTL layout + nav (Vazirmatn); / HR dashboard, /apply applicant
   src/components/      Create-JD form, JD list, requirements editor, ranking panel, header, ui/
