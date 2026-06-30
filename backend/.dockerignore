@@ -1,0 +1,10 @@
+# Keep the build context (and image) lean and secret-free.
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+tests/
+.env
+*.db
+.DS_Store

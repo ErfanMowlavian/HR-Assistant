@@ -1,0 +1,32 @@
+# One command to run the whole app: `docker compose up --build`.
+# Frontend on http://localhost:3000, backend on http://localhost:8000.
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    # LLM provider credentials (copy backend/.env from .env.example). Optional:
+    # without it the app still runs, extraction just degrades gracefully.
+    env_file:
+      - path: ./backend/.env
+        required: false
+    environment:
+      # Persist SQLite on a named volume instead of the ephemeral container fs.
+      DATABASE_URL: sqlite:////data/hr_assistant.db
+      FRONTEND_ORIGIN: http://localhost:3000
+    volumes:
+      - backend-data:/data
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        # Baked into the /api proxy rewrite; targets the backend service.
+        BACKEND_URL: http://backend:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+volumes:
+  backend-data:

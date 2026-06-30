@@ -103,7 +103,31 @@ The **three test seams** the PRD calls for are established here:
    ranking is auditable. Unit-tested directly over crafted inputs.
 3. **HTTP API** — FastAPI `TestClient` behavior tests (`backend/tests/`).
 
-## Prerequisites
+## Run with Docker
+
+The whole app — backend + frontend — comes up with one command:
+
+```bash
+docker compose up --build
+```
+
+- Frontend: <http://localhost:3000>
+- Backend API + docs: <http://localhost:8000/docs>
+
+To use a real model, put provider credentials in `backend/.env` (copy
+`.env.example`); it's optional — without it the app still runs and extraction
+degrades gracefully. To load the demo data once the stack is up:
+
+```bash
+docker compose exec backend python -m app.seed
+```
+
+Details: the backend image installs with `uv`; the frontend builds to a Next.js
+**standalone** bundle (the `/api` proxy target is baked from the `BACKEND_URL`
+build arg → the `backend` service). SQLite persists on a named volume
+(`backend-data`), so seeded data survives restarts.
+
+## Prerequisites (local, without Docker)
 
 - Python ≥ 3.11 (the backend pins 3.12 via `uv`)
 - Node ≥ 18
@@ -196,7 +220,9 @@ default; override with `BACKEND_URL`). Start the backend first, then open
 ## Project layout
 
 ```
+docker-compose.yml     one command: backend + frontend, shared network, db volume
 backend/
+  Dockerfile           uv-based image; runs uvicorn app.main:app
   app/
     main.py            FastAPI app factory + CORS + lifespan (create tables)
     config.py          Settings from .env (DB + LLM provider)
@@ -252,6 +278,7 @@ backend/
     test_gateway_errors.py      failure classifier: provider-down vs off-schema
     test_scoring_service.py     upsert_evaluation / rescore_job orchestration
 frontend/
+  Dockerfile           multi-stage; Next.js standalone runtime image
   src/app/             RTL layout + nav (Vazirmatn); / HR dashboard, /apply applicant
   src/components/
     ui/                shadcn primitives (button, card, input, …)
