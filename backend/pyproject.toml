@@ -1,3 +1,7 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [project]
 name = "hr-assistant-backend"
 version = "0.1.0"
@@ -29,9 +33,7 @@ dev = [
 testpaths = ["tests"]
 addopts = "-q"
 
-[tool.setuptools.packages.find]
-where = ["."]
-include = ["app*"]
-
-[tool.setuptools.package-data]
-"app.eval" = ["*.json"]  # ship the committed Gold Set with the package
+[tool.hatch.build.targets.wheel]
+# The importable package is `app`; hatchling ships its files (including the
+# committed Gold Set, app/eval/gold_set.json) without a setuptools egg-info.
+packages = ["app"]
