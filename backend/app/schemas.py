@@ -88,6 +88,15 @@ class EvaluationRead(BaseModel):
     weights: ScoreWeights
 
 
+class GapReportRequest(BaseModel):
+    """Applicant payload for a read-only gap report: just their resume text.
+
+    No display name and no persistence — the report is informational only and
+    creates neither a Submission nor an Evaluation (Issue #9)."""
+
+    resume_text: str = Field(min_length=1, description="The resume text to check.")
+
+
 class RankedCandidate(BaseModel):
     """One row in a JD's ranked candidate list.
 

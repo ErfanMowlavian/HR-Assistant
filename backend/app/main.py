@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import jobs, ranking, submissions
+from app.api import gap, jobs, ranking, submissions
 from app.config import get_settings
 from app.db import init_db
 
@@ -32,6 +32,7 @@ def create_app() -> FastAPI:
     app.include_router(jobs.router)
     app.include_router(submissions.router)
     app.include_router(ranking.router)
+    app.include_router(gap.router)
 
     @app.get("/api/health", tags=["health"])
     def health() -> dict[str, str]:

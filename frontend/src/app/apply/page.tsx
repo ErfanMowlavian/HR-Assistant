@@ -16,8 +16,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
   createSubmission,
+  getGapReport,
   listJobs,
   uploadResume,
+  type GapReport,
   type JobDescription,
   type Submission,
 } from "@/lib/api";
@@ -33,6 +35,8 @@ export default function ApplyPage() {
   const [uploading, setUploading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [result, setResult] = React.useState<Submission | null>(null);
+  const [gap, setGap] = React.useState<GapReport | null>(null);
+  const [gapLoading, setGapLoading] = React.useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   React.useEffect(() => {
@@ -81,13 +85,31 @@ export default function ApplyPage() {
     }
   }
 
-  const busy = submitting || uploading;
+  // Read-only gap report: judges the JD's skills against the pasted resume and
+  // shows what's missing. Informational only — it never submits or ranks.
+  async function handleGapReport() {
+    if (selectedId === null) return;
+    setGapLoading(true);
+    setError(null);
+    setGap(null);
+    try {
+      setGap(await getGapReport(selectedId, resume.trim()));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "خطای ناشناخته");
+    } finally {
+      setGapLoading(false);
+    }
+  }
+
+  const busy = submitting || uploading || gapLoading;
   const canSubmit =
     selectedId !== null &&
     name.trim().length > 0 &&
     resume.trim().length > 0 &&
     !busy;
   const canUpload = selectedId !== null && name.trim().length > 0 && !busy;
+  const canCheckGaps =
+    selectedId !== null && resume.trim().length > 0 && !busy;
 
   return (
     <main className="container max-w-3xl py-10">
@@ -196,6 +218,14 @@ export default function ApplyPage() {
                   >
                     {uploading ? "در حال پردازش PDF…" : "آپلود PDF"}
                   </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    disabled={!canCheckGaps}
+                    onClick={handleGapReport}
+                  >
+                    {gapLoading ? "در حال بررسی…" : "مهارت‌های جاافتاده"}
+                  </Button>
                 </div>
                 <p className="text-xs text-muted-foreground">
                   وارد کردن متن، مسیر اصلی و مطمئن است. آپلود PDF بهترین تلاش است؛
@@ -218,6 +248,71 @@ export default function ApplyPage() {
                     <p className="mt-1 text-muted-foreground">
                       رزومه ذخیره شد؛ استخراج خودکار مهارت‌ها بعداً انجام خواهد شد.
                     </p>
+                  )}
+                </div>
+              )}
+
+              {gap && (
+                <div className="mt-4 space-y-3 rounded-md border p-3 text-sm">
+                  <div className="flex items-center justify-between">
+                    <p className="font-medium text-foreground">
+                      گزارش مهارت‌های جاافتاده
+                    </p>
+                    <span className="text-xs text-muted-foreground">
+                      {gap.demonstrated_count} از {gap.total_skills} مهارت نشان داده شده
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    این گزارش فقط جنبهٔ اطلاع‌رسانی دارد و در رتبه‌بندی شما تأثیری
+                    ندارد.
+                  </p>
+                  {gap.missing.length === 0 && gap.partial.length === 0 ? (
+                    <p className="text-muted-foreground">
+                      رزومهٔ شما همهٔ مهارت‌های این آگهی را پوشش می‌دهد. ✔
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      {gap.missing.length > 0 && (
+                        <div className="space-y-1">
+                          <p className="text-xs text-muted-foreground">
+                            یافت‌نشده در رزومه:
+                          </p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {gap.missing.map((g) => (
+                              <span
+                                key={`${g.kind}:${g.skill}`}
+                                className="inline-flex items-center gap-1 rounded-md border border-red-600/40 bg-red-600/10 px-2 py-0.5 text-xs text-red-700 dark:text-red-400"
+                              >
+                                <span className="font-medium">{g.skill}</span>
+                                {g.kind === "nice" && (
+                                  <span className="opacity-50">(امتیازی)</span>
+                                )}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {gap.partial.length > 0 && (
+                        <div className="space-y-1">
+                          <p className="text-xs text-muted-foreground">
+                            به‌طور جزئی نشان داده‌شده:
+                          </p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {gap.partial.map((g) => (
+                              <span
+                                key={`${g.kind}:${g.skill}`}
+                                className="inline-flex items-center gap-1 rounded-md border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-xs text-amber-700 dark:text-amber-400"
+                              >
+                                <span className="font-medium">{g.skill}</span>
+                                {g.kind === "nice" && (
+                                  <span className="opacity-50">(امتیازی)</span>
+                                )}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
               )}

@@ -163,3 +163,39 @@ export async function getRanking(jobId: number): Promise<RankedCandidate[]> {
 export async function rankNow(jobId: number): Promise<RankedCandidate[]> {
   return handle(await fetch(`/api/jobs/${jobId}/rank`, { method: "POST" }));
 }
+
+// --- Applicant Gap Report (Issue #9) — read-only, does not affect ranking ---
+
+export interface GapSkill {
+  skill: string;
+  verdict: "partial" | "no";
+  kind: "required" | "nice";
+}
+
+export interface GapReport {
+  missing: GapSkill[];
+  partial: GapSkill[];
+  demonstrated_count: number;
+  total_skills: number;
+}
+
+export async function getGapReport(
+  jobId: number,
+  resumeText: string
+): Promise<GapReport> {
+  const res = await fetch(`/api/jobs/${jobId}/gap-report`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ resume_text: resumeText }),
+  });
+  if (!res.ok) {
+    let detail: string | undefined;
+    try {
+      detail = (await res.json())?.detail;
+    } catch {
+      /* non-JSON error body */
+    }
+    throw new Error(detail ?? `خطای سرور (${res.status})`);
+  }
+  return (await res.json()) as GapReport;
+}

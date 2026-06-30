@@ -73,6 +73,15 @@ Implemented so far:
   so a bad PDF can never silently produce a corrupted Evaluation. Paste remains
   the primary, reliable path.
 
+- **Issue #9 — read-only applicant gap report.** The thin applicant-side slice
+  (ADR-0003, Option B): given a chosen JD and a pasted resume, an applicant can
+  view the JD skills their resume **doesn't demonstrate**
+  (`POST /api/jobs/{id}/gap-report`), in Persian, split into "missing" (verdict
+  *no*) and "partial". It's derived from the same per-skill judgments the scorer
+  uses, but is **informational only** — it persists nothing (no Submission, no
+  Evaluation) and never changes any ranking. Kept in its own module so the whole
+  applicant flow can be removed cleanly.
+
 Tests run entirely against the fake gateway — no real model call.
 
 ## Architecture
@@ -198,6 +207,8 @@ backend/
     api/jobs.py        create (+extract) / list / get / PATCH requirements (re-scores)
     api/submissions.py applicant submit (paste) / upload PDF / list per JD
     api/ranking.py     GET ranked candidates (stored, no model) / POST rank (live)
+    api/gap.py         POST read-only applicant gap report (no persistence)
+    gap.py             build_gap_report — JD skills a resume doesn't demonstrate
     seed.py            `python -m app.seed` — demo JD + resumes + stored Evaluations
     extraction/
       normalize.py     Persian/Arabic digit → Latin folding
@@ -232,6 +243,8 @@ backend/
     test_rank_now_api.py        "rank now" re-runs scoring live, best-first
     test_pdf.py                 PDF extraction + garbled-Persian heuristic (pure)
     test_pdf_upload_api.py      upload: clean PDF → submission, garbled → paste nudge
+    test_gap.py                 gap report builder: missing/partial, graceful (pure)
+    test_gap_report_api.py      gap report read-only — never alters ranking
 frontend/
   src/app/             RTL layout + nav (Vazirmatn); / HR dashboard, /apply applicant
   src/components/      Create-JD form, JD list, requirements editor, ranking panel, header, ui/
