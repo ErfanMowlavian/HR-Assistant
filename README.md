@@ -210,9 +210,9 @@ backend/
     api/gap.py         POST read-only applicant gap report (no persistence)
     judging.py         judge_requirements — per-skill judging, graceful on errors
     gap.py             build_gap_report — JD skills a resume doesn't demonstrate
+    normalize.py       Persian/Arabic digit → Latin folding (shared text util)
     seed.py            `python -m app.seed` — demo JD + resumes + stored Evaluations
     extraction/
-      normalize.py     Persian/Arabic digit → Latin folding
       pdf.py           best-effort PDF text extraction + garbled-Persian heuristic
       service.py       extract_jd_requirements / extract_resume_fields
     scoring/

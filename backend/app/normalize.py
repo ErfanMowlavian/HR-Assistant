@@ -3,6 +3,10 @@
 Persian text writes numbers with Persian (۰-۹) or Arabic-Indic (٠-٩) digits.
 They must be folded to Latin (0-9) before any numeric reasoning, so that
 "۵ سال" is understood as 5 years.
+
+A general text utility, not tied to any one layer: extraction normalizes the
+text the model reads, and the scorer folds extracted values before matching.
+It lives here, at the top level, so neither consumer imports the other's package.
 """
 
 from __future__ import annotations

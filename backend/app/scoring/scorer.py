@@ -16,8 +16,8 @@ from __future__ import annotations
 
 from pydantic import BaseModel
 
-from app.extraction.normalize import normalize_digits
 from app.llm.types import JDRequirements, ResumeFields, SkillJudgment, SkillVerdict
+from app.normalize import normalize_digits
 from app.scoring.weights import ScoreWeights
 
 # A verdict's contribution to coverage. "partial" counts as half credit.

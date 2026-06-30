@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from pydantic import ValidationError
 
-from app.extraction.normalize import normalize_digits
+from app.normalize import normalize_digits
 from app.llm.errors import GatewayError, InvalidModelOutput, ProviderUnavailable
 from app.llm.gateway import LLMGateway
 from app.llm.types import JDRequirements, ResumeFields

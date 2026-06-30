@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from app.extraction.normalize import normalize_digits
+from app.normalize import normalize_digits
 
 
 def test_persian_digits_folded_to_latin():
