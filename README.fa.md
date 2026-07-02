@@ -4,10 +4,25 @@
 **هوش مصنوعی متن را می‌خواند** (فیلدهای ساختاریافته را استخراج می‌کند، هر مهارت را yes/partial/no قضاوت می‌کند)
 و **ریاضیات قطعی رتبه‌بندی می‌کند** — یعنی قابل توضیح و شفاف است.
 
-مستندات کامل شامل PRD، ADRها، واژه‌نامه، مدل دامنه و سند مدیریت پروژه در پوشه‌های `docs/` و `doc-fa/` قرار دارد.
+> **English:** [README.md](README.md) — English project documentation
 
-> 📋 **سند مدیریت پروژه (برنامه‌ریزی جامع):** [doc-fa/management-plan.md](doc-fa/management-plan.md)  
-> شامل WBS، بسته‌های کاری، تخمین زمان و هزینه، نمودار شبکه، مسیر بحرانی، نمودار گانت، EVM، Trello و MS Project
+---
+
+## نمایش زنده (Live Demo)
+
+> این دمو با داده‌های از پیش محاسبه‌شده اجرا می‌شود — بدون نیاز به API هوش مصنوعی.
+
+**مراحل نمایش (حداکثر ۳ دقیقه):**
+
+۱. **صفحه نخست** — داشبورد مدیریت HR شامل لیست شرح‌شغل‌ها را مشاهده می‌کنید
+۲. **ایجاد شرح شغل** — یک موقعیت شغلی جدید با عنوان و شرح ایجاد کنید
+۳. **ارسال رزومه** — در صفحه متقاضی، یک رزومه را چسبانده یا آپلود کنید
+۴. **مشاهده رتبه‌بندی** — به داشبورد برگردید و کاندیداها را به ترتیب بهترین تطابق ببینید
+۵. **جزئیات امتیاز** — روی هر کاندید کلیک کنید تا breakdown امتیاز (مهارت‌ها، سابقه، تحصیلات) نمایش داده شود
+۶. **گزارش Gap** — متقاضی می‌تواند ببیند کدام مهارت‌های شغلی را ندارد
+
+> اجرا با یک دستور: `docker compose up --build`  
+> بارگذاری داده‌های دمو: `docker compose exec backend python -m app.seed`
 
 ---
 
@@ -55,13 +70,6 @@ backend/   FastAPI + SQLite، لایه دروازه LLM، تست‌ها
 frontend/  Next.js (App Router) + shadcn/ui، فارسی RTL، فونت وزیرمتن
 ```
 
-> 📋 **سند مدیریت پروژه** (فارسی): [doc-fa/management-plan.md](doc-fa/management-plan.md)
-
-سه نقطه تزریق (Seam) برای تست:
-1. **دروازه LLM** (`backend/app/llm/`) — یک اینترفیس با `FakeLLMGateway` برای تست و `LiteLLMGateway` برای تولید
-2. **امتیازدهی** (`backend/app/scoring/`) — تابع خالص قطعی
-3. **API HTTP** — تست‌های رفتار با `TestClient`
-
 ## اجرا با Docker
 
 ```bash
@@ -76,87 +84,14 @@ docker compose up --build
 docker compose exec backend python -m app.seed
 ```
 
-## پیش‌نیازها (محلی، بدون Docker)
+---
 
-- Python ≥ 3.11
-- Node ≥ 18
-- [`uv`](https://docs.astral.sh/uv/)
+## مستندات تکمیلی
 
-## بک‌اند
-
-```bash
-cd backend
-uv venv --python 3.12 .venv
-source .venv/bin/activate
-uv pip install -e ".[dev]"
-
-# اجرای تست‌ها:
-python -m pytest
-
-# اجرای API:
-uvicorn app.main:app --reload
-```
-
-## ارزیابی (Precision@3 / nDCG)
-
-```bash
-cd backend
-python -m app.eval          # دروازه جعلی — قطعی، قابل تکرار
-python -m app.eval --real   # ارائه‌دهنده واقعی
-```
-
-## فرانت‌اند
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-## ساختار پروژه
-
-```
-docker-compose.yml
-backend/
-  Dockerfile
-  app/
-    main.py
-    config.py
-    db.py
-    models.py
-    schemas.py
-    deps.py
-    api/
-      jobs.py
-      submissions.py
-      ranking.py
-      gap.py
-    judging.py
-    gap.py
-    normalize.py
-    seed.py
-    extraction/
-      pdf.py
-      service.py
-    scoring/
-      weights.py
-      scorer.py
-      service.py
-    eval/
-      gold_set.json
-      metrics.py
-      harness.py
-      __main__.py
-    llm/
-      gateway.py
-      fake.py
-      litellm_gateway.py
-      errors.py
-      types.py
-  tests/
-frontend/
-  Dockerfile
-  src/app/
-  src/components/
-  src/lib/
-```
+| سند | توضیح |
+|-----|-------|
+| [📋 سند مدیریت پروژه](doc-fa/management-plan.md) | WBS، بسته‌های کاری، تخمین زمان/هزینه، نمودار شبکه، مسیر بحرانی، گانت، EVM، Trello، MS Project (فارسی) |
+| [📄 PRD](docs/prd-resume-ranking.md) | مستند نیازمندی‌های محصول (انگلیسی) |
+| [📖 واژه‌نامه](docs/glossary.md) | اصطلاحات دامنه (انگلیسی) |
+| [🧠 مدل دامنه](docs/domain-model.md) | مدل مفهومی سیستم (انگلیسی) |
+| [🏛️ تصمیمات معماری](docs/decisions/) | ۱۴ ADR مستند (انگلیسی) |
