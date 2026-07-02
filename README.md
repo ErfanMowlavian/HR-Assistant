@@ -6,7 +6,54 @@ and **deterministic math ranks** — explainable by design. See the PRD
 ([issue #1](https://github.com/ErfanMowlavian/HR-Assistant/issues/1)) and the
 ADRs/glossary/domain model under `docs/`.
 
-Implemented so far:
+> **فارسی:** [README.fa.md](README.fa.md) — مستندات کامل پروژه به زبان فارسی
+
+---
+
+## Project Topic
+
+**Persian Resume Ranking System (HR Assistant)** — an RTL web application that uses AI to rank résumés against job descriptions.
+
+## Scenario
+
+A tech company receives dozens of résumés for an open position. The HR specialist, instead of manually reading each résumé and guessing the fit, uses this system:
+
+1. **Create Job Description** — HR enters the job description
+2. **Auto-extraction** — AI extracts required skills, experience, education, seniority
+3. **Submit Résumé** — applicants submit their résumé (text or PDF)
+4. **Smart Scoring** — the system scores each résumé against the JD
+5. **Ranking** — résumés displayed best-match-first
+
+## Project Goals
+
+| Goal | Description |
+|------|-------------|
+| **Overall goal** | Design and implement a Persian resume ranking system |
+| **Specific 1** | Auto-extract job requirements from JD via LLM |
+| **Specific 2** | Accept résumés (text & PDF) and extract structured fields |
+| **Specific 3** | Deterministic, transparent scoring per résumé |
+| **Specific 4** | Explainable ranking of candidates |
+| **Specific 5** | Read-only Gap report for applicants |
+| **Specific 6** | Evaluate ranking quality with Precision@3 and nDCG |
+| **Specific 7** | Demo mode with pre-computed data (no live API needed) |
+
+## Target Community
+
+| Stakeholder | Role | Primary Need |
+|-------------|------|-------------|
+| **HR Specialist** | Primary admin user | View rankings, inspect scores, edit requirements |
+| **Applicant** | Applicant-side user | Submit résumé, view Gap report |
+| **IT Manager** | Project sponsor | Deploy system, ensure quality |
+| **Developers** | Project team | Maintain and extend the system |
+
+---
+
+> 📋 **Full project management plan (Persian):** [doc-fa/management-plan.md](doc-fa/management-plan.md)  
+> Includes WBS, work packages, time & cost estimation, network diagram, critical path, Gantt chart, EVM, Trello, and MS Project
+
+---
+
+## Implemented so far:
 
 - **Issue #2 — walking skeleton.** HR creates a Job Description (title + Persian
   text), it persists in SQLite, and shows up in a Persian RTL dashboard. Stands
